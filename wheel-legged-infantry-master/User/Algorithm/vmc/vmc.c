@@ -182,7 +182,7 @@ static void wheel_motors_torque_set(Chassis *chassis) {
     }else {
         chassis->wheel_turn_torque = pid_calc(&chassis->chassis_spin_pid,
                                               chassis->imu_reference.yaw_gyro,
-                                              3);
+                                              4);
     }
 
     chassis->leg_L.wheel_torque = 0;

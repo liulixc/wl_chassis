@@ -75,7 +75,7 @@ typedef double fp64;
 /** Õ»≥§Œª÷√ª∑PID **/
 #define CHASSIS_LEG_L0_POS_PID_P 15.0f
 #define CHASSIS_LEG_L0_POS_PID_I 0.0f
-#define CHASSIS_LEG_L0_POS_PID_D 50.0f
+#define CHASSIS_LEG_L0_POS_PID_D 15.0f
 #define CHASSIS_LEG_L0_POS_PID_IOUT_LIMIT 0.0f
 #define CHASSIS_LEG_L0_POS_PID_OUT_LIMIT 20.0f
 

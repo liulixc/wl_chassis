@@ -17,13 +17,13 @@
 #include "wheel.h"
 #include "remote.h"
 #include "error.h"
-
+#include "Referee.h"
 
 extern CAN_HandleTypeDef hcan1;
 extern CAN_HandleTypeDef hcan2;
 
 //int jump_finish = 0;
-
+extern Referee_info_t Referee;
 extern Chassis chassis;
 
 extern KalmanFilter_t vaEstimateKF;
@@ -34,7 +34,7 @@ extern KalmanFilter_t vaEstimateKF;
  *******************************************************************************/
 
 
-/** Ä£¿éÀëÏß´¦Àí **/
+/** Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ß´ï¿½ï¿½ï¿½ **/
 static void chassis_device_offline_handle() {
     check_is_rc_online(get_rc_ctrl());
     if (get_errors() != 0) {
@@ -42,7 +42,7 @@ static void chassis_device_offline_handle() {
     }
 }
 
-/** µ×ÅÌ½ÓÊÕÒ£¿ØÆ÷ÐÅÏ¢ **/
+/** ï¿½ï¿½ï¿½Ì½ï¿½ï¿½ï¿½Ò£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ **/
 static void set_chassis_ctrl_info() {
     chassis.chassis_ctrl_info.v_m_per_s = (float) (get_rc_ctrl()->rc.ch[CHASSIS_SPEED_CHANNEL]) * RC_TO_VX;
     chassis.chassis_ctrl_info.x = chassis.chassis_ctrl_info.x + CHASSIS_PERIOD * 0.001f * chassis.chassis_ctrl_info.v_m_per_s;
@@ -57,15 +57,15 @@ static void set_chassis_ctrl_info() {
 
 }
 
-/** µ×ÅÌ¸ù¾ÝÒ£¿ØÆ÷ÉèÖÃÄ£Ê½ **/
+/** ï¿½ï¿½ï¿½Ì¸ï¿½ï¿½ï¿½Ò£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½ **/
 static void set_chassis_mode() {
-    if (switch_is_down(get_rc_ctrl()->rc.s[RC_s_R])) { // Ê§ÄÜ
+    if (switch_is_down(get_rc_ctrl()->rc.s[RC_s_R])) { // Ê§ï¿½ï¿½
         chassis.chassis_ctrl_mode_last = chassis.chassis_ctrl_mode;
         chassis.chassis_ctrl_mode = CHASSIS_DISABLE;
-    } else if (switch_is_mid(get_rc_ctrl()->rc.s[RC_s_R]) && chassis.init_flag == false) { // ³õÊ¼»¯Ä£Ê½
+    } else if (switch_is_mid(get_rc_ctrl()->rc.s[RC_s_R]) && chassis.init_flag == false) { // ï¿½ï¿½Ê¼ï¿½ï¿½Ä£Ê½
         chassis.chassis_ctrl_mode_last = chassis.chassis_ctrl_mode;
         chassis.chassis_ctrl_mode = CHASSIS_INIT;
-    } else if (switch_is_mid(get_rc_ctrl()->rc.s[RC_s_R]) && chassis.init_flag == true) { // Ê¹ÄÜ
+    } else if (switch_is_mid(get_rc_ctrl()->rc.s[RC_s_R]) && chassis.init_flag == true) { // Ê¹ï¿½ï¿½
         chassis.chassis_ctrl_mode_last = chassis.chassis_ctrl_mode;
         chassis.chassis_ctrl_mode = CHASSIS_ENABLE;
 
@@ -83,18 +83,19 @@ static void set_chassis_mode() {
     }
 }
 
-/** µ×ÅÌÍ¨¹ý°å¼äÍ¨ÐÅ½ÓÊÕÔÆÌ¨µÄÐÅÏ¢ **/
+/** ï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½ï¿½ï¿½ï¿½Í¨ï¿½Å½ï¿½ï¿½ï¿½ï¿½ï¿½Ì¨ï¿½ï¿½ï¿½ï¿½Ï¢ **/
 static void set_chassis_ctrl_info_from_gimbal_msg() {
     chassis.chassis_ctrl_info.v_m_per_s = get_gimbal_msg()->chassis_ctrl_info.v_m_per_s;
+//    if (Referee.GameRobotStat.chassis_power_limit==80)chassis.chassis_ctrl_info.v_m_per_s*=1.25f;
     chassis.chassis_ctrl_info.x = chassis.chassis_ctrl_info.x + CHASSIS_PERIOD * 0.001f * chassis.chassis_ctrl_info.v_m_per_s;
     chassis.chassis_ctrl_info.yaw_angle_rad = get_gimbal_msg()->chassis_ctrl_info.yaw_angle_rad;
     chassis.chassis_ctrl_info.roll_angle_rad = get_gimbal_msg()->chassis_ctrl_info.roll_angle_rad;
-//    chassis.chassis_ctrl_info.height_m = get_gimbal_msg()->chassis_ctrl_info.height_m;
-    chassis.chassis_ctrl_info.height_m = 0.18f;
+    chassis.chassis_ctrl_info.height_m = get_gimbal_msg()->chassis_ctrl_info.height_m;
+//    chassis.chassis_ctrl_info.height_m = 0.18f;
     VAL_LIMIT(chassis.chassis_ctrl_info.height_m, MIN_L0, MAX_L0);
 }
 
-/** µ×ÅÌ¸ù¾ÝÔÆÌ¨ÐÅÏ¢ÉèÖÃÄ£Ê½ **/
+/** ï¿½ï¿½ï¿½Ì¸ï¿½ï¿½ï¿½ï¿½ï¿½Ì¨ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½Ä£Ê½ **/
 static void set_chassis_mode_from_gimbal_msg() {
     if (get_gimbal_msg()->chassis_ctrl_mode == CHASSIS_DISABLE) {
         chassis.chassis_ctrl_mode_last = chassis.chassis_ctrl_mode;
@@ -116,13 +117,13 @@ static void set_chassis_mode_from_gimbal_msg() {
  *                                 Function                                    *
  *******************************************************************************/
 
-/*********************** »ñÈ¡µ×ÅÌ´«¸ÐÆ÷ÐÅÏ¢ *************************/
+/*********************** ï¿½ï¿½È¡ï¿½ï¿½ï¿½Ì´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ *************************/
 static void get_IMU_info() {
 
     /** Yaw **/
     chassis.imu_reference.yaw_angle = -*(get_ins_angle() + 0);
 
-    // È¦Êý¼ì²â
+    // È¦ï¿½ï¿½ï¿½ï¿½ï¿½
     if (chassis.imu_reference.yaw_angle - chassis.imu_reference.yaw_last_angle > 3.1415926f)
     {
         chassis.imu_reference.yaw_round_count--;
@@ -140,7 +141,7 @@ static void get_IMU_info() {
     /** Roll **/
     chassis.imu_reference.roll_angle = -*(get_ins_angle() + 1);
 
-    /** ¸üÐÂ¸÷Öá¼ÓËÙ¶ÈºÍ½ÇËÙ¶È **/
+    /** ï¿½ï¿½ï¿½Â¸ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ÈºÍ½ï¿½ï¿½Ù¶ï¿½ **/
     chassis.imu_reference.pitch_gyro = -*(get_ins_gyro() + 0);
     chassis.imu_reference.yaw_gyro = -*(get_ins_gyro() + 2);
     chassis.imu_reference.roll_gyro = -*(get_ins_gyro() + 1);
@@ -149,14 +150,14 @@ static void get_IMU_info() {
     chassis.imu_reference.ay = *(get_ins_accel() + 0);
     chassis.imu_reference.az = *(get_ins_accel() + 2);
 
-    /** È¥³ýÖØÁ¦Ó°ÏìµÄ¸÷Öá¼ÓËÙ¶È  Ðý×ª¾ØÕó·¨ **/
+    /** È¥ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó°ï¿½ï¿½Ä¸ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½  ï¿½ï¿½×ªï¿½ï¿½ï¿½ï¿½ **/
     chassis.imu_reference.ax_filtered = chassis.imu_reference.ax - GRAVITY * sinf(chassis.imu_reference.pitch_angle);
     chassis.imu_reference.ay_filtered =  chassis.imu_reference.ay
                                          - GRAVITY * cosf(chassis.imu_reference.pitch_angle) * sinf(chassis.imu_reference.roll_angle);
     chassis.imu_reference.az_filtered =  chassis.imu_reference.az
                                          - GRAVITY * cosf(chassis.imu_reference.pitch_angle) * cosf(chassis.imu_reference.roll_angle);
 
-    /** »úÌåÊúÖ±·½Ïò¼ÓËÙ¶È **/
+    /** ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½ **/
     float robot_az_raw =  chassis.imu_reference.ax_filtered * sinf(chassis.imu_reference.pitch_angle)
                           + chassis.imu_reference.ay_filtered * sinf(-chassis.imu_reference.roll_angle) * cosf(chassis.imu_reference.pitch_angle)
                           + chassis.imu_reference.az_filtered * cosf(chassis.imu_reference.pitch_angle) * cosf(chassis.imu_reference.roll_angle);
@@ -166,10 +167,10 @@ static void get_IMU_info() {
 
 }
 
-/************************ Ïòµ×ÅÌµç»ú·¢ËÍÁ¦¾Ø **********************/
+/************************ ï¿½ï¿½ï¿½ï¿½Ìµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ **********************/
 static void chassis_motor_cmd_send() {
 
-/** DEBUG_MODE: ÖÃ1Ê±½øÈëµ÷ÊÔÄ£Ê½£¬¹Ø±Õ¹Ø½ÚºÍÂÖì±Êä³ö **/
+/** DEBUG_MODE: ï¿½ï¿½1Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½ï¿½Ø±Õ¹Ø½Úºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ **/
 #if DEBUG_MODE
     set_joint_torque(0, 0, 0, 0);
     osDelay(2);
@@ -193,10 +194,10 @@ static void chassis_motor_cmd_send() {
 #endif
 }
 
-/************************ µ×ÅÌpid³õÊ¼»¯ **********************/
+/************************ ï¿½ï¿½ï¿½ï¿½pidï¿½ï¿½Ê¼ï¿½ï¿½ **********************/
 static void chassis_pid_init() {
 
-    /** ×ªÏòPID **/
+    /** ×ªï¿½ï¿½PID **/
     pid_init(&chassis.chassis_turn_pid,
              CHASSIS_TURN_PID_OUT_LIMIT,
              CHASSIS_TURN_PID_IOUT_LIMIT,
@@ -204,7 +205,7 @@ static void chassis_pid_init() {
              CHASSIS_TURN_PID_I,
              CHASSIS_TURN_PID_D);
 
-    /** ÍÈ³¤PID **/
+    /** ï¿½È³ï¿½PID **/
     pid_init(&chassis.leg_L.leg_pos_pid,
              CHASSIS_LEG_L0_POS_PID_OUT_LIMIT,
              CHASSIS_LEG_L0_POS_PID_IOUT_LIMIT,
@@ -233,7 +234,7 @@ static void chassis_pid_init() {
              CHASSIS_LEG_L0_SPEED_PID_I,
              CHASSIS_LEG_L0_SPEED_PID_D);
 
-    // ÀëµØºóµÄÍÈ³¤PID
+    // ï¿½ï¿½Øºï¿½ï¿½ï¿½È³ï¿½PID
     pid_init(&chassis.leg_L.offground_leg_pid,
              CHASSIS_OFFGROUND_L0_PID_OUT_LIMIT,
              CHASSIS_OFFGROUND_L0_PID_IOUT_LIMIT,
@@ -248,7 +249,7 @@ static void chassis_pid_init() {
              CHASSIS_OFFGROUND_L0_PID_I,
              CHASSIS_OFFGROUND_L0_PID_D);
 
-    /** ·ÀÅü²æPID **/
+    /** ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½PID **/
     pid_init(&chassis.chassis_leg_coordination_pid,
              CHASSIS_LEG_COORDINATION_PID_OUT_LIMIT,
              CHASSIS_LEG_COORDINATION_PID_IOUT_LIMIT,
@@ -280,22 +281,22 @@ static void chassis_pid_init() {
              -5,-0.1f,0);
 }
 
-/************************ µ×ÅÌÏà¹Ø²ÎÊý³õÊ¼»¯ **********************/
+/************************ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø²ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ **********************/
 static void chassis_init() {
 
-    /** ³õÊ¼»¯µ×ÅÌÄ£Ê½ **/
+    /** ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½ **/
     chassis.chassis_ctrl_mode = CHASSIS_DISABLE;
 
-    /** ÂÖì±µç»ú³õÊ¼»¯ **/
+    /** ï¿½ï¿½ì±µï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ **/
     wheel_init();
 
-    /** ¹Ø½Úµç»ú³õÊ¼»¯ **/
+    /** ï¿½Ø½Úµï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ **/
     joint_init();
 
-    /** µ×ÅÌpid³õÊ¼»¯ **/
+    /** ï¿½ï¿½ï¿½ï¿½pidï¿½ï¿½Ê¼ï¿½ï¿½ **/
     chassis_pid_init();
 
-    /** ÒÆ¶¯Æ½¾ùÂË²¨Æ÷³õÊ¼»¯ **/
+    /** ï¿½Æ¶ï¿½Æ½ï¿½ï¿½ï¿½Ë²ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ **/
     moving_average_filter_init(&chassis.robot_az_filter);
     moving_average_filter_init(&chassis.leg_L.Fn_filter);
     moving_average_filter_init(&chassis.leg_R.Fn_filter);
@@ -306,16 +307,16 @@ static void chassis_init() {
 
     vTaskSuspendAll();
 
-    /** ÂÖì±-ËÙ¶ÈÈÚºÏ¼ÓËÙ¶È ¿¨¶ûÂüÂË²¨Æ÷ ³õÊ¼»¯ **/
+    /** ï¿½ï¿½ï¿½-ï¿½Ù¶ï¿½ï¿½ÚºÏ¼ï¿½ï¿½Ù¶ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë²ï¿½ï¿½ï¿½ ï¿½ï¿½Ê¼ï¿½ï¿½ **/
     xvEstimateKF_Init(&vaEstimateKF);
 
     xTaskResumeAll();
 }
 
-// µ¹µØºóÒÔ×îµÍÍÈ³¤ÆðÉí
+// ï¿½ï¿½ï¿½Øºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È³ï¿½ï¿½ï¿½ï¿½ï¿½
 static void chassis_selfhelp(void)
 {
-    if(ABS(chassis.imu_reference.pitch_angle) > 0.1395f) // -8¡ã~ 8¡ã
+    if(ABS(chassis.imu_reference.pitch_angle) > 0.1395f) // -8ï¿½ï¿½~ 8ï¿½ï¿½
     {
         chassis.leg_L.joint_F_torque = 0.0f;
         chassis.leg_L.joint_B_torque = 0.0f;
@@ -330,7 +331,7 @@ static void chassis_selfhelp(void)
 
 
 
-//    if(ABS(chassis.imu_reference.pitch_angle) > 0.1395f) // -8¡ã~ 8¡ã
+//    if(ABS(chassis.imu_reference.pitch_angle) > 0.1395f) // -8ï¿½ï¿½~ 8ï¿½ï¿½
 //    {
 //        chassis.chassis_ctrl_info.height_m = MIN_L0;
 //
@@ -361,7 +362,7 @@ static void is_chassis_offground(void)
  *******************************************************************************/
 
 
-/************************* Ê§ÄÜÈÎÎñ ***************************/
+/************************* Ê§ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ***************************/
 static void chassis_disable_task() {
 
     chassis.leg_L.wheel_torque = 0;
@@ -381,31 +382,31 @@ static void chassis_disable_task() {
     chassis.chassis_ctrl_info.height_m = MIN_L0;
 
 
-    /** ³õÊ¼»¯±êÖ¾Î» **/
-    // µ×ÅÌ³õÊ¼»¯±êÖ¾Î»
+    /** ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½Ö¾Î» **/
+    // ï¿½ï¿½ï¿½Ì³ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½Ö¾Î»
     chassis.init_flag = false;
 
-    // Æ½ºâ±êÖ¾Î»
+    // Æ½ï¿½ï¿½ï¿½Ö¾Î»
     chassis.is_chassis_balance = false;
-    // µ¹µØ×Ô¾È³É¹¦±êÖ¾Î»
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Ô¾È³É¹ï¿½ï¿½ï¿½Ö¾Î»
     chassis.recover_finish = false;
 
-    // ÀëµØ±êÖ¾Î»
+    // ï¿½ï¿½Ø±ï¿½Ö¾Î»
     chassis.leg_L.leg_is_offground = false;
     chassis.leg_R.leg_is_offground = false;
     chassis.chassis_is_offground   = false;
 
-    // ÌøÔ¾±êÖ¾Î»
+    // ï¿½ï¿½Ô¾ï¿½ï¿½Ö¾Î»
     chassis.jump_flag = false;
 
     /**
-     * ÒòÎªLKµç»úÉÏµçÄ¬ÈÏÊ¹ÄÜ£¬Ö®Ç°ÓÐ¹ýÒ£¿ØÆ÷Ê§ÄÜºóÂÖì±µç»úÒÀÈ»·è×ªµÄÏÖÏó£¬
-     * Òò´ËÑ¡ÔñÔÚINITÄ£Ê½ÔÙÊ¹ÄÜ£¬²¢ÇÒÊ§ÄÜºóÍ£Ö¹ÂÖì±µç»ú£¬µ«´ËÊ±ÂÖì±ÈÔ¿ÉÒÔ½ÓÊÜÐÅÏ¢²¢²úÉú¶¯×÷
+     * ï¿½ï¿½ÎªLKï¿½ï¿½ï¿½ï¿½Ïµï¿½Ä¬ï¿½ï¿½Ê¹ï¿½Ü£ï¿½Ö®Ç°ï¿½Ð¹ï¿½Ò£ï¿½ï¿½ï¿½ï¿½Ê§ï¿½Üºï¿½ï¿½ï¿½ì±µï¿½ï¿½ï¿½ï¿½È»ï¿½ï¿½×ªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+     * ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½INITÄ£Ê½ï¿½ï¿½Ê¹ï¿½Ü£ï¿½ï¿½ï¿½ï¿½ï¿½Ê§ï¿½Üºï¿½Í£Ö¹ï¿½ï¿½ì±µï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½Ô¿ï¿½ï¿½Ô½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
      * **/
     wheel_stop();
 }
 
-/*********************** ³õÊ¼»¯ÈÎÎñ ***************************/
+/*********************** ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ***************************/
 static void chassis_init_task() {
 
     joint_enable();
@@ -414,7 +415,7 @@ static void chassis_init_task() {
     chassis.init_flag = true;
 }
 
-/*********************** Ê¹ÄÜÈÎÎñ ****************************/
+/*********************** Ê¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ****************************/
 static void chassis_enable_task() {
 
     lqr_ctrl();
@@ -425,7 +426,7 @@ static void chassis_enable_task() {
 
 }
 
-/*********************** ×ÜÈÎÎñ ******************************/
+/*********************** ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ******************************/
 extern void chassis_task(void const *pvParameters) {
 
     chassis_init();

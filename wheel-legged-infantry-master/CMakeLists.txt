@@ -61,6 +61,7 @@ include_directories(Core/Inc USB_DEVICE/App USB_DEVICE/Target Drivers/STM32F4xx_
 
         User/App/chassis
         User/App/gimbal
+        User/App/Referee
 
         User/Bsp/can
         User/Bsp/delay
