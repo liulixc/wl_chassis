@@ -202,15 +202,15 @@ static void state_variable_out(Leg* leg_L, Leg* leg_R) {
   leg_R->state_variable_wheel_out.phi_dot = leg_R->state_variable_error.phi_dot * wheel_K_R[5]; // 极性正确
 
   // -?  待测
-//  leg_L->state_variable_joint_out.theta = leg_L->state_variable_error.theta * joint_K_L[0];
-//  leg_L->state_variable_joint_out.theta_dot = leg_L->state_variable_error.theta_dot * joint_K_L[1];
+  leg_L->state_variable_joint_out.theta = leg_L->state_variable_error.theta * joint_K_L[0];
+  leg_L->state_variable_joint_out.theta_dot = leg_L->state_variable_error.theta_dot * joint_K_L[1];
   leg_L->state_variable_joint_out.x = leg_L->state_variable_error.x * joint_K_L[2];
   leg_L->state_variable_joint_out.x_dot = leg_L->state_variable_error.x_dot * joint_K_L[3];
   leg_L->state_variable_joint_out.phi = leg_L->state_variable_error.phi * joint_K_L[4];
   leg_L->state_variable_joint_out.phi_dot = leg_L->state_variable_error.phi_dot * joint_K_L[5];
 
-//  leg_R->state_variable_joint_out.theta = leg_R->state_variable_error.theta * joint_K_R[0];
-//  leg_R->state_variable_joint_out.theta_dot = leg_R->state_variable_error.theta_dot * joint_K_R[1];
+  leg_R->state_variable_joint_out.theta = leg_R->state_variable_error.theta * joint_K_R[0];
+  leg_R->state_variable_joint_out.theta_dot = leg_R->state_variable_error.theta_dot * joint_K_R[1];
   leg_R->state_variable_joint_out.x = leg_R->state_variable_error.x * joint_K_R[2];
   leg_R->state_variable_joint_out.x_dot = leg_R->state_variable_error.x_dot * joint_K_R[3];
   leg_R->state_variable_joint_out.phi = leg_R->state_variable_error.phi * joint_K_R[4];

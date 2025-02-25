@@ -28,6 +28,21 @@ extern Chassis chassis;
 
 extern KalmanFilter_t vaEstimateKF;
 
+////创建电流滤波器，输出数据给功率控制系数求解
+//first_kalman_filter_t currentKal;
+//first_kalman_filter_t chassis_filter[4];
+//float Q,R,filterCurrent,nowCurrent;
+//fp32 buffer_limit;
+//fp32 k;
+//float d,e,f,h;
+
+extern double motor_iq_l,motor_w_l;
+extern double motor_iq_r,motor_w_r;
+extern double all_motor_iq,all_motor_w;
+double all_current_pingfang;
+double all_w_mul_current;
+extern float power_nihe;
+
 
 /*******************************************************************************
  *                                    Remote                                   *
@@ -48,10 +63,17 @@ static void set_chassis_ctrl_info() {
     chassis.chassis_ctrl_info.x = chassis.chassis_ctrl_info.x + CHASSIS_PERIOD * 0.001f * chassis.chassis_ctrl_info.v_m_per_s;
 
     chassis.chassis_ctrl_info.yaw_angle_rad -= (float) (get_rc_ctrl()->rc.ch[CHASSIS_YAW_CHANNEL]) * (-RC_TO_YAW_INCREMENT);
-    chassis.chassis_ctrl_info.height_m = 0.18f;
+//    chassis.chassis_ctrl_info.height_m = 0.18f;
 
-//    chassis.chassis_ctrl_info.height_m = chassis.chassis_ctrl_info.height_m + (float) (get_rc_ctrl()->rc.ch[TEST_CHASSIS_LEG_CHANNEL]) * 0.00001f;
-//    VAL_LIMIT(chassis.chassis_ctrl_info.height_m, MIN_L0, MAX_L0);
+    if(switch_is_down(get_rc_ctrl()->rc.s[RC_s_L])){
+        chassis.chassis_ctrl_info.height_m = 0.10f;
+    }
+    else if(switch_is_mid(get_rc_ctrl()->rc.s[RC_s_L])){
+        chassis.chassis_ctrl_info.height_m = 0.18f;
+    }
+    else if(switch_is_up(get_rc_ctrl()->rc.s[RC_s_L])){
+        chassis.chassis_ctrl_info.height_m = 0.35f;
+    }
 
 //    chassis.chassis_ctrl_info.roll_angle_rad = (float) (get_rc_ctrl()->rc.ch[TEST_CHASSIS_ROLL_CHANNEL]) * 0.001f;
 
@@ -178,9 +200,10 @@ static void chassis_motor_cmd_send() {
 
 #else
 
-    //  set_joint_torque(0, 0, 0, 0);
+//      set_joint_torque(0, 0, 0, 0);
 
-    //  set_wheel_torque(0, 0);
+
+//      set_wheel_torque(0, 0);
 
     set_joint_torque(-chassis.leg_L.joint_F_torque,
                      -chassis.leg_L.joint_B_torque,
@@ -190,8 +213,28 @@ static void chassis_motor_cmd_send() {
     set_wheel_torque(-chassis.leg_L.wheel_torque, -chassis.leg_R.wheel_torque);
 
 
+        static float count=0;
+        count++;
+//        set_wheel_torque(0, 0);
+
+//        set_wheel_torque(1.0f*sin(10.0f*2*PI*count/10000.f), 1.0f*sin(10.0f*2*PI*count/10000.f));
+
+
+
 
 #endif
+//    all_motor_w=motor_w_l+motor_w_r;
+//    all_motor_iq=motor_iq_r+motor_iq_l;
+
+
+//实测下面这套功率拟合基本能用
+    all_current_pingfang=motor_iq_r*motor_iq_r + motor_iq_l*motor_iq_l;
+    all_w_mul_current=motor_iq_r*motor_w_r + motor_iq_l*motor_w_l;
+    power_nihe=0.1843*all_current_pingfang+0.0087*all_w_mul_current+2.1f;
+    if (power_nihe<0)power_nihe=0;
+
+
+
 }
 
 /************************ ����pid��ʼ�� **********************/

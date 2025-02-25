@@ -6,7 +6,9 @@
 #include "user_lib.h"
 #include "joint.h"
 #include "moving_filter.h"
+#include "Referee.h"
 
+extern double power_nihe;
 extern Chassis chassis;
 extern ChassisPhysicalConfig chassis_physical_config;
 
@@ -185,6 +187,33 @@ static void wheel_motors_torque_set(Chassis *chassis) {
                                               4);
     }
 
+
+    double wheel_L_balance_torque,wheel_R_balance_torque;
+    double wheel_L_move_torque,wheel_R_move_torque;
+
+    wheel_L_balance_torque  = chassis->leg_L.state_variable_wheel_out.theta
+                              + chassis->leg_L.state_variable_wheel_out.theta_dot // √
+                              + chassis->leg_L.state_variable_wheel_out.phi
+                              + chassis->leg_L.state_variable_wheel_out.phi_dot;
+
+    wheel_R_balance_torque = chassis->leg_R.state_variable_wheel_out.theta
+                             + chassis->leg_R.state_variable_wheel_out.theta_dot // √
+                             + chassis->leg_R.state_variable_wheel_out.phi
+                             + chassis->leg_R.state_variable_wheel_out.phi_dot;
+
+    wheel_L_move_torque = chassis->leg_L.state_variable_wheel_out.x
+                          + chassis->leg_L.state_variable_wheel_out.x_dot;
+
+    wheel_R_move_torque =chassis->leg_R.state_variable_wheel_out.x
+                         + chassis->leg_R.state_variable_wheel_out.x_dot;
+    if(power_nihe>Referee.GameRobotStat.chassis_power_limit)
+    {
+        //求解这样一个一元二次方程 a*（wheel_L_balance_torque+k*wheel_L_move_torque)^2 + b*（wheel_L_balance_torque+k*wheel_L_move_torque)*motor_w_l + c - power_limit/2=0
+        //其中a=0.1843，b=0.0087，c=2.1
+
+    }
+
+
     chassis->leg_L.wheel_torque = 0;
     chassis->leg_R.wheel_torque = 0;
 
@@ -204,6 +233,8 @@ static void wheel_motors_torque_set(Chassis *chassis) {
     chassis->leg_R.wheel_torque += chassis->leg_R.state_variable_wheel_out.phi_dot;
     chassis->leg_R.wheel_torque -= chassis->wheel_turn_torque;
     chassis->leg_R.wheel_torque *= -1;
+
+
 
     // 离地处理
     if (chassis->leg_L.leg_is_offground || chassis->leg_R.leg_is_offground) {

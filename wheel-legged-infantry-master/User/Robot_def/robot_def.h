@@ -11,7 +11,7 @@ typedef double fp64;
 
 /** 宏定义 **/
 //CHASSIS_REMOTE置1：底盘由遥控器控制
-#define CHASSIS_REMOTE 0
+#define CHASSIS_REMOTE 1
 
 //DEBUG_MODE置1：进入调试模式，关闭关节和轮毂输出
 #define DEBUG_MODE 0
@@ -29,7 +29,7 @@ typedef double fp64;
 #define CHASSIS_ROLL_CHANNEL 0
 
 /** 变量约束 **/
-#define MAX_CHASSIS_VX_SPEED 1.0f
+#define MAX_CHASSIS_VX_SPEED 2.0f
 #define MAX_PITCH 0.174533f
 #define MIN_PITCH (-0.174533f)
 #define MAX_ROLL 0.12f

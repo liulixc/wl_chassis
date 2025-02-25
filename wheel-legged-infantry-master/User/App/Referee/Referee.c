@@ -17,6 +17,9 @@ uint8_t usart1_buf[REFEREE_BUFFER_SIZE]={0};
 Referee_info_t Referee;
 uint8_t test_usart;
 
+extern double motor_torque_l,motor_angular_vel_l;
+extern double motor_torque_r,motor_angular_vel_r;
+
 
 /*函数和声明*/
 static bool Referee_read_data(uint8_t *ReadFromUsart);
@@ -169,9 +172,8 @@ void judge_team_client(){
 
     }
 }
-float all_rpm_mul_current = 0;
-float all_current_pingfang = 0;
-float power_nihe = 0;
+
+
 bool Referee_read_data(uint8_t *ReadFromUsart)
 {
     int CmdID=0;//数据命令码解析
@@ -259,6 +261,7 @@ bool Referee_read_data(uint8_t *ReadFromUsart)
 //
 //                        if(power_nihe < 0)
 //                            power_nihe = 0;
+
                         break;
 
                     case Referee_ID_game_robot_pos://0x0203     机器人位置数据     10HZ
