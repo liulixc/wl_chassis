@@ -4,6 +4,7 @@
 #include "joint.h"
 #include "wheel.h"
 #include "gimbal.h"
+#include "cap.h"
 
 extern CAN_HandleTypeDef hcan1;
 extern CAN_HandleTypeDef hcan2;

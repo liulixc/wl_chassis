@@ -12,6 +12,7 @@
 #include "user_lib.h"
 #include "moving_filter.h"
 #include "vx_kalman_filter.h"
+#include "ramp.h"
 
 #include "joint.h"
 #include "wheel.h"
@@ -28,20 +29,12 @@ extern Chassis chassis;
 
 extern KalmanFilter_t vaEstimateKF;
 
-////创建电流滤波器，输出数据给功率控制系数求解
-//first_kalman_filter_t currentKal;
-//first_kalman_filter_t chassis_filter[4];
-//float Q,R,filterCurrent,nowCurrent;
-//fp32 buffer_limit;
-//fp32 k;
-//float d,e,f,h;
 
-extern double motor_iq_l,motor_w_l;
-extern double motor_iq_r,motor_w_r;
-extern double all_motor_iq,all_motor_w;
-double all_current_pingfang;
-double all_w_mul_current;
-extern float power_nihe;
+extern float motor_torque_l,motor_w_l;
+extern float motor_torque_r,motor_w_r;
+float power_nihe;
+
+ramp_function_source_t  chassis_vx_ramp;
 
 
 /*******************************************************************************
@@ -59,7 +52,9 @@ static void chassis_device_offline_handle() {
 
 /** ���̽���ң������Ϣ **/
 static void set_chassis_ctrl_info() {
-    chassis.chassis_ctrl_info.v_m_per_s = (float) (get_rc_ctrl()->rc.ch[CHASSIS_SPEED_CHANNEL]) * RC_TO_VX;
+    float temp_v_m_per_s = (float) (get_rc_ctrl()->rc.ch[CHASSIS_SPEED_CHANNEL]) * RC_TO_VX;
+    ramp_calc(&chassis_vx_ramp,temp_v_m_per_s);
+    chassis.chassis_ctrl_info.v_m_per_s=chassis_vx_ramp.out;
     chassis.chassis_ctrl_info.x = chassis.chassis_ctrl_info.x + CHASSIS_PERIOD * 0.001f * chassis.chassis_ctrl_info.v_m_per_s;
 
     chassis.chassis_ctrl_info.yaw_angle_rad -= (float) (get_rc_ctrl()->rc.ch[CHASSIS_YAW_CHANNEL]) * (-RC_TO_YAW_INCREMENT);
@@ -205,35 +200,29 @@ static void chassis_motor_cmd_send() {
 
 //      set_wheel_torque(0, 0);
 
-    set_joint_torque(-chassis.leg_L.joint_F_torque,
-                     -chassis.leg_L.joint_B_torque,
-                     chassis.leg_R.joint_F_torque,
-                     chassis.leg_R.joint_B_torque);
 
-    set_wheel_torque(-chassis.leg_L.wheel_torque, -chassis.leg_R.wheel_torque);
+        set_joint_torque(-chassis.leg_L.joint_F_torque,
+                         -chassis.leg_L.joint_B_torque,
+                         chassis.leg_R.joint_F_torque,
+                         chassis.leg_R.joint_B_torque);
 
 
-        static float count=0;
-        count++;
-//        set_wheel_torque(0, 0);
-
-//        set_wheel_torque(1.0f*sin(10.0f*2*PI*count/10000.f), 1.0f*sin(10.0f*2*PI*count/10000.f));
+    set_wheel_torque(chassis.leg_L.wheel_torque, chassis.leg_R.wheel_torque);
 
 
 
 
 #endif
-//    all_motor_w=motor_w_l+motor_w_r;
-//    all_motor_iq=motor_iq_r+motor_iq_l;
 
 
-//实测下面这套功率拟合基本能用
-    all_current_pingfang=motor_iq_r*motor_iq_r + motor_iq_l*motor_iq_l;
-    all_w_mul_current=motor_iq_r*motor_w_r + motor_iq_l*motor_w_l;
-    power_nihe=0.1843*all_current_pingfang+0.0087*all_w_mul_current+2.1f;
+//实测下面这套功率拟合基本能用,我需要用发给电机的力矩重新拟合一下功率看看跟裁判系统反馈功率的不同，然后看看是不是右边轮毂力矩取反的问题
+
+
+        power_nihe=3.1604*motor_torque_l*motor_torque_l+3.3810*motor_torque_r*motor_torque_r
+                +0.0140*motor_torque_l*motor_w_l+0.0142*motor_torque_r*motor_w_r
+                +0.6685+0.3708
+                +0.0116* fabs(motor_w_l)+0.0102* fabs(motor_w_r);
     if (power_nihe<0)power_nihe=0;
-
-
 
 }
 
@@ -346,6 +335,9 @@ static void chassis_init() {
     moving_average_filter_init(&chassis.leg_L.theta_ddot_filter);
     moving_average_filter_init(&chassis.leg_R.theta_ddot_filter);
 
+    //斜坡函数初始化
+    ramp_init(&chassis_vx_ramp,0.002f,0.002f);
+
 //  chassis.chassis_ctrl_info.spin_speed = 5.0f;
 
     vTaskSuspendAll();
@@ -356,11 +348,34 @@ static void chassis_init() {
     xTaskResumeAll();
 }
 
+//static bool is_joints_reduced(void)
+//{
+//    if (ABS(get_joint_motors()[0].pos_r+1.5707963) <= 0.25 &&
+//        ABS(get_joint_motors()[1].pos_r-1.5707963) <= 0.25 &&
+//        ABS(get_joint_motors()[2].pos_r+1.5707963) <= 0.25 &&
+//        ABS(get_joint_motors()[3].pos_r-1.5707963) <= 0.25) {
+//        return true;
+//    } else {
+//        return false;
+//    }
+//}
+
 // ���غ�������ȳ�����
 static void chassis_selfhelp(void)
 {
     if(ABS(chassis.imu_reference.pitch_angle) > 0.1395f) // -8��~ 8��
     {
+//        if(!is_joints_reduced())//腿部没有收起来
+//        {
+//            chassis.leg_L.wheel_torque = 0;
+//            chassis.leg_R.wheel_torque = 0;
+//
+//            set_dm8009_MIT(CAN_2, JOINT_LF_SEND, -1.5707963, 0, 20, 5, 0);
+//            set_dm8009_MIT(CAN_2, JOINT_LB_SEND, 1.5707963, 0, 20, 5, 0);
+//            osDelay(2);
+//            set_dm8009_MIT(CAN_2, JOINT_RF_SEND, 1.5707963, 0, 20, 5, 0);
+//            set_dm8009_MIT(CAN_2, JOINT_RB_SEND, -1.5707963, 0, 20, 5, 0);
+//        }
         chassis.leg_L.joint_F_torque = 0.0f;
         chassis.leg_L.joint_B_torque = 0.0f;
         chassis.leg_R.joint_F_torque = 0.0f;
@@ -394,6 +409,8 @@ static void is_chassis_offground(void)
         chassis.chassis_is_offground = false;
     }
 }
+
+
 
 /*********************************************************************************/
 
@@ -442,6 +459,8 @@ static void chassis_disable_task() {
     // ��Ծ��־λ
     chassis.jump_flag = false;
 
+    chassis.power_is_dangerous=false;
+
     /**
      * ��ΪLK����ϵ�Ĭ��ʹ�ܣ�֮ǰ�й�ң����ʧ�ܺ���챵����Ȼ��ת������
      * ���ѡ����INITģʽ��ʹ�ܣ�����ʧ�ܺ�ֹͣ��챵��������ʱ����Կ��Խ�����Ϣ����������
@@ -455,7 +474,24 @@ static void chassis_init_task() {
     joint_enable();
     wheel_enable();
 
-    chassis.init_flag = true;
+//
+//    if(is_joints_reduced())
+//    {
+        chassis.init_flag = true;
+//    }
+//    else
+//    {
+//        chassis.init_flag=false;
+//        chassis.leg_L.wheel_torque = 0;
+//        chassis.leg_R.wheel_torque = 0;
+//
+//        set_dm8009_MIT(CAN_2, JOINT_LF_SEND, -1.5707963, 0, 20, 5, 0);
+//        set_dm8009_MIT(CAN_2, JOINT_LB_SEND, 1.5707963, 0, 20, 5, 0);
+//        osDelay(2);
+//        set_dm8009_MIT(CAN_2, JOINT_RF_SEND, 1.5707963, 0, 20, 5, 0);
+//        set_dm8009_MIT(CAN_2, JOINT_RB_SEND, -1.5707963, 0, 20, 5, 0);
+//    }
+
 }
 
 /*********************** ʹ������ ****************************/

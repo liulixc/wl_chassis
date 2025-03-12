@@ -7,10 +7,19 @@
 #include "joint.h"
 #include "moving_filter.h"
 #include "Referee.h"
+#include "arm_math.h"
+#include "math.h"
 
-extern double power_nihe;
+extern float motor_torque_l,motor_w_l;
+extern float motor_torque_r,motor_w_r;
+extern Referee_info_t Referee;
 extern Chassis chassis;
 extern ChassisPhysicalConfig chassis_physical_config;
+
+float wheel_L_balance_torque,wheel_R_balance_torque;
+float wheel_L_move_torque,wheel_R_move_torque;
+
+float test_delta,test_root1,test_root2;
 
 float L_L0_dot_test, R_L0_dot_test;
 
@@ -159,6 +168,7 @@ static void forward_dynamics(VMC *vmc, const ChassisPhysicalConfig *physical_con
                     vmc->forward_kinematics.T1_T4_set_point.array);
 }
 
+
 static void wheel_motors_torque_set(Chassis *chassis) {
 
     if (chassis == NULL) {
@@ -188,42 +198,40 @@ static void wheel_motors_torque_set(Chassis *chassis) {
     }
 
 
-    double wheel_L_balance_torque,wheel_R_balance_torque;
-    double wheel_L_move_torque,wheel_R_move_torque;
 
-    wheel_L_balance_torque  = chassis->leg_L.state_variable_wheel_out.theta
-                              + chassis->leg_L.state_variable_wheel_out.theta_dot // √
-                              + chassis->leg_L.state_variable_wheel_out.phi
-                              + chassis->leg_L.state_variable_wheel_out.phi_dot;
+
+    wheel_L_balance_torque  = -chassis->leg_L.state_variable_wheel_out.theta
+                              - chassis->leg_L.state_variable_wheel_out.theta_dot // √
+                              - chassis->leg_L.state_variable_wheel_out.phi
+                              - chassis->leg_L.state_variable_wheel_out.phi_dot;
 
     wheel_R_balance_torque = chassis->leg_R.state_variable_wheel_out.theta
                              + chassis->leg_R.state_variable_wheel_out.theta_dot // √
                              + chassis->leg_R.state_variable_wheel_out.phi
                              + chassis->leg_R.state_variable_wheel_out.phi_dot;
 
-    wheel_L_move_torque = chassis->leg_L.state_variable_wheel_out.x
-                          + chassis->leg_L.state_variable_wheel_out.x_dot;
+    wheel_L_move_torque = -chassis->leg_L.state_variable_wheel_out.x
+                          - chassis->leg_L.state_variable_wheel_out.x_dot;
 
     wheel_R_move_torque =chassis->leg_R.state_variable_wheel_out.x
                          + chassis->leg_R.state_variable_wheel_out.x_dot;
-    if(power_nihe>Referee.GameRobotStat.chassis_power_limit)
-    {
-        //求解这样一个一元二次方程 a*（wheel_L_balance_torque+k*wheel_L_move_torque)^2 + b*（wheel_L_balance_torque+k*wheel_L_move_torque)*motor_w_l + c - power_limit/2=0
-        //其中a=0.1843，b=0.0087，c=2.1
 
-    }
-
+    //后面再添加进来
+//    if(Referee.PowerHeatData.chassis_power_buffer<10){
+//        is_dangerous=true;
+//        //系数c越大，限制的功率值越低，比如最大功率80w，限制的功率降至60w，那底盘功率被限制后,最大仅可达到60w上下，几乎不会超过80w
+//    }
 
     chassis->leg_L.wheel_torque = 0;
     chassis->leg_R.wheel_torque = 0;
 
-    chassis->leg_L.wheel_torque += chassis->leg_L.state_variable_wheel_out.theta;//
-    chassis->leg_L.wheel_torque += chassis->leg_L.state_variable_wheel_out.theta_dot;// √
-    chassis->leg_L.wheel_torque += chassis->leg_L.state_variable_wheel_out.x;
-    chassis->leg_L.wheel_torque += chassis->leg_L.state_variable_wheel_out.x_dot;
-    chassis->leg_L.wheel_torque += chassis->leg_L.state_variable_wheel_out.phi;//
-    chassis->leg_L.wheel_torque += chassis->leg_L.state_variable_wheel_out.phi_dot;
-    chassis->leg_L.wheel_torque += chassis->wheel_turn_torque;
+    chassis->leg_L.wheel_torque -= chassis->leg_L.state_variable_wheel_out.theta;//
+    chassis->leg_L.wheel_torque -= chassis->leg_L.state_variable_wheel_out.theta_dot;// √
+    chassis->leg_L.wheel_torque -= chassis->leg_L.state_variable_wheel_out.x;
+    chassis->leg_L.wheel_torque -= chassis->leg_L.state_variable_wheel_out.x_dot;
+    chassis->leg_L.wheel_torque -= chassis->leg_L.state_variable_wheel_out.phi;//
+    chassis->leg_L.wheel_torque -= chassis->leg_L.state_variable_wheel_out.phi_dot;
+    chassis->leg_L.wheel_torque -= chassis->wheel_turn_torque;
 
     chassis->leg_R.wheel_torque += chassis->leg_R.state_variable_wheel_out.theta;
     chassis->leg_R.wheel_torque += chassis->leg_R.state_variable_wheel_out.theta_dot; // √
@@ -232,8 +240,126 @@ static void wheel_motors_torque_set(Chassis *chassis) {
     chassis->leg_R.wheel_torque += chassis->leg_R.state_variable_wheel_out.phi;
     chassis->leg_R.wheel_torque += chassis->leg_R.state_variable_wheel_out.phi_dot;
     chassis->leg_R.wheel_torque -= chassis->wheel_turn_torque;
-    chassis->leg_R.wheel_torque *= -1;
 
+
+
+    chassis->power_nihe=3.1604*chassis->leg_L.wheel_torque*chassis->leg_L.wheel_torque+3.3810*chassis->leg_R.wheel_torque*chassis->leg_R.wheel_torque
+                        +0.0140*chassis->leg_L.wheel_torque*motor_w_l+0.0142*chassis->leg_R.wheel_torque*motor_w_r
+                        +0.6685+0.3708
+                        +0.0116* fabs(motor_w_l)+0.0102* fabs(motor_w_r);
+    chassis->power_nihe = fmaxf(chassis->power_nihe, 0);
+
+    if(chassis->power_nihe>40)
+    {
+        //求解这样一个关于衰减系数 K 的一元二次方程 k1_l * (wheel_L_balance_torque+ wheel_L_move_torque- K*wheel_turn_torque)^2 + k1_r * (wheel_R_balance_torque + wheel_R_move_torque - K*wheel_turn_torque)^2
+        //                  + k2_l * (wheel_L_balance_torque + wheel_L_move_torque -K*wheel_turn_torque)*motor_w_l + k2_r *(wheel_R_balance_torque+ wheel_R_move_torque - K*wheel_turn_torque)*motor_w_r)
+        //                  + k3_l+k3_r+k4_l*absf(motor_w_l)+k4_r*absf(motor_w_r) - power_limit=0
+        //其中     const float k1_l = 3.1604f;
+        //        const float k2_l = 0.0140f;
+        //        const float k3_l = 0.6685f;
+        //        const float k4_l = 0.0116f;
+        //
+        //        const float k1_r = 3.3810f;
+        //        const float k2_r = 0.0142f;
+        //        const float k3_r = 0.3708f;
+        //        const float k4_r = 0.0102f;
+        //将上面方程展开并整理为 a*K^2+b*K+c=0：
+        const float k1_l = 3.1604f;
+        const float k2_l = 0.0140f;
+        const float k3_l = 0.6685f;
+        const float k4_l = 0.0116f;
+
+        const float k1_r = 3.3810f;
+        const float k2_r = 0.0142f;
+        const float k3_r = 0.3708f;
+        const float k4_r = 0.0102f;
+
+        // 定义中间变量
+        float T_turn = chassis->wheel_turn_torque;
+        float A_L = wheel_L_balance_torque + wheel_L_move_torque;
+        float A_R = wheel_R_balance_torque + wheel_R_move_torque;
+        float W_L = motor_w_l;
+        float W_R = motor_w_r;
+
+        // 计算系数 a, b, c
+        float a = T_turn * T_turn * (k1_l + k1_r);
+        float b = -T_turn * (2 * k1_l * A_L + 2 * k1_r * A_R + k2_l * W_L + k2_r * W_R);
+        float c = k1_l * A_L * A_L + k1_r * A_R * A_R
+                  + k2_l * A_L * W_L + k2_r * A_R * W_R
+                  + (k3_l + k3_r + k4_l * fabs(W_L) + k4_r * fabs(W_R) - 40);
+
+        chassis->last_chassis_power_K=chassis->chassis_power_K;
+
+        float discriminant = b*b - 4.0f*a*c;
+        float sqrt_result;
+        test_delta =discriminant;
+        // 更稳健的根选择策略
+        if(discriminant >= 0.0f) {
+            arm_sqrt_f32(discriminant, &sqrt_result);
+             float root1 = (-b + sqrt_result) / (2.0f*a);
+             float root2 = (-b - sqrt_result) / (2.0f*a);
+
+            test_root1=root1;
+            test_root2=root2;
+            // 优先选择物理意义合理的根
+            if (root1>=0 && root1<=1) chassis->chassis_power_K=root1;
+            else if (root2>=0 && root2<=1) chassis->chassis_power_K=root2;
+            else chassis->chassis_power_K=0;
+        } else {
+            chassis->chassis_power_K = -b/(2*a); // 取极值点
+            chassis->chassis_power_K = fminf(fmaxf(chassis->chassis_power_K, 0), 1);
+        }
+    }
+    else chassis->last_chassis_power_K=chassis->chassis_power_K=1;
+
+
+    chassis->leg_L.wheel_torque = 0;
+    chassis->leg_R.wheel_torque = 0;
+
+    chassis->leg_L.wheel_torque -= chassis->leg_L.state_variable_wheel_out.theta;//
+    chassis->leg_L.wheel_torque -= chassis->leg_L.state_variable_wheel_out.theta_dot;// √
+    chassis->leg_L.wheel_torque -= chassis->leg_L.state_variable_wheel_out.x;
+    chassis->leg_L.wheel_torque -= chassis->leg_L.state_variable_wheel_out.x_dot;
+    chassis->leg_L.wheel_torque -= chassis->leg_L.state_variable_wheel_out.phi;//
+    chassis->leg_L.wheel_torque -= chassis->leg_L.state_variable_wheel_out.phi_dot;
+    chassis->leg_L.wheel_torque -= chassis->chassis_power_K *chassis->wheel_turn_torque;
+
+
+
+
+    chassis->leg_R.wheel_torque += chassis->leg_R.state_variable_wheel_out.theta;
+    chassis->leg_R.wheel_torque += chassis->leg_R.state_variable_wheel_out.theta_dot; // √
+    chassis->leg_R.wheel_torque += chassis->leg_R.state_variable_wheel_out.x;
+    chassis->leg_R.wheel_torque += chassis->leg_R.state_variable_wheel_out.x_dot;
+    chassis->leg_R.wheel_torque += chassis->leg_R.state_variable_wheel_out.phi;
+    chassis->leg_R.wheel_torque += chassis->leg_R.state_variable_wheel_out.phi_dot;
+    chassis->leg_R.wheel_torque -= chassis->chassis_power_K *chassis->wheel_turn_torque;
+
+//    chassis->leg_L.wheel_torque = 0;
+//    chassis->leg_R.wheel_torque = 0;
+//
+//    chassis->leg_L.wheel_torque -= chassis->leg_L.state_variable_wheel_out.theta;//
+//    chassis->leg_L.wheel_torque -= chassis->leg_L.state_variable_wheel_out.theta_dot;// √
+//    chassis->leg_L.wheel_torque -= chassis->leg_L.state_variable_wheel_out.x;
+//    chassis->leg_L.wheel_torque -= chassis->leg_L.state_variable_wheel_out.x_dot;
+//    chassis->leg_L.wheel_torque -= chassis->leg_L.state_variable_wheel_out.phi;//
+//    chassis->leg_L.wheel_torque -= chassis->leg_L.state_variable_wheel_out.phi_dot;
+//    chassis->leg_L.wheel_torque -= chassis->wheel_turn_torque;
+//
+//    chassis->leg_R.wheel_torque += chassis->leg_R.state_variable_wheel_out.theta;
+//    chassis->leg_R.wheel_torque += chassis->leg_R.state_variable_wheel_out.theta_dot; // √
+//    chassis->leg_R.wheel_torque += chassis->leg_R.state_variable_wheel_out.x;
+//    chassis->leg_R.wheel_torque += chassis->leg_R.state_variable_wheel_out.x_dot;
+//    chassis->leg_R.wheel_torque += chassis->leg_R.state_variable_wheel_out.phi;
+//    chassis->leg_R.wheel_torque += chassis->leg_R.state_variable_wheel_out.phi_dot;
+//    chassis->leg_R.wheel_torque -= chassis->wheel_turn_torque;
+
+
+    chassis->power_nihe2=3.1604f*chassis->leg_L.wheel_torque*chassis->leg_L.wheel_torque+3.3810*chassis->leg_R.wheel_torque*chassis->leg_R.wheel_torque
+                         +0.0140*chassis->leg_L.wheel_torque*motor_w_l+0.0142*chassis->leg_R.wheel_torque*motor_w_r
+                         +0.6685+0.3708
+                         +0.0116* fabs(motor_w_l)+0.0102* fabs(motor_w_r);
+    chassis->power_nihe2 = fmaxf(chassis->power_nihe2, 0);
 
 
     // 离地处理
@@ -267,6 +393,26 @@ static void joint_motors_torque_set(Chassis *chassis,
     chassis->steer_compensatory_torque = pid_calc(&chassis->chassis_leg_coordination_pid,
                                                   chassis->theta_error,
                                                   0);
+
+
+
+//    //Left
+//    chassis->leg_L.vmc.forward_kinematics.Fxy_set_point.E.Tp_set_point += chassis->leg_L.state_variable_joint_out.theta; // √
+//    chassis->leg_L.vmc.forward_kinematics.Fxy_set_point.E.Tp_set_point += chassis->leg_L.state_variable_joint_out.theta_dot; // √
+//    chassis->leg_L.vmc.forward_kinematics.Fxy_set_point.E.Tp_set_point += chassis->chassis_power_K*chassis->leg_L.state_variable_joint_out.x; // √
+//    chassis->leg_L.vmc.forward_kinematics.Fxy_set_point.E.Tp_set_point += chassis->chassis_power_K*chassis->leg_L.state_variable_joint_out.x_dot; // √
+//    chassis->leg_L.vmc.forward_kinematics.Fxy_set_point.E.Tp_set_point += chassis->leg_L.state_variable_joint_out.phi; // ! 应该没啥问题吧 它的输出加了负号更爆
+//    chassis->leg_L.vmc.forward_kinematics.Fxy_set_point.E.Tp_set_point += chassis->leg_L.state_variable_joint_out.phi_dot;
+//    chassis->leg_L.vmc.forward_kinematics.Fxy_set_point.E.Tp_set_point -= chassis->steer_compensatory_torque;
+//
+//    //Right
+//    chassis->leg_R.vmc.forward_kinematics.Fxy_set_point.E.Tp_set_point += chassis->leg_R.state_variable_joint_out.theta; // √
+//    chassis->leg_R.vmc.forward_kinematics.Fxy_set_point.E.Tp_set_point += chassis->leg_R.state_variable_joint_out.theta_dot; // √
+//    chassis->leg_R.vmc.forward_kinematics.Fxy_set_point.E.Tp_set_point += chassis->chassis_power_K*chassis->leg_R.state_variable_joint_out.x; // √
+//    chassis->leg_R.vmc.forward_kinematics.Fxy_set_point.E.Tp_set_point += chassis->chassis_power_K*chassis->leg_R.state_variable_joint_out.x_dot; // √
+//    chassis->leg_R.vmc.forward_kinematics.Fxy_set_point.E.Tp_set_point += chassis->leg_R.state_variable_joint_out.phi; // ! 应该没啥问题吧 它的输出加了负号更爆
+//    chassis->leg_R.vmc.forward_kinematics.Fxy_set_point.E.Tp_set_point += chassis->leg_R.state_variable_joint_out.phi_dot;
+//    chassis->leg_R.vmc.forward_kinematics.Fxy_set_point.E.Tp_set_point += chassis->steer_compensatory_torque;
 
     //Left
     chassis->leg_L.vmc.forward_kinematics.Fxy_set_point.E.Tp_set_point += chassis->leg_L.state_variable_joint_out.theta; // √

@@ -58,10 +58,12 @@ include_directories(Core/Inc USB_DEVICE/App USB_DEVICE/Target Drivers/STM32F4xx_
         User/Algorithm/user_lib
         User/Algorithm/vmc
         User/Algorithm/CRC
+        User/Algorithm/ramp
 
         User/App/chassis
         User/App/gimbal
         User/App/Referee
+        User/App/Cap
 
         User/Bsp/can
         User/Bsp/delay
@@ -80,6 +82,7 @@ include_directories(Core/Inc USB_DEVICE/App USB_DEVICE/Target Drivers/STM32F4xx_
         User/Device/motor/wheel/LK9025
         User/Device/remote
         User/Device/servo
+        User/Device/cap
 
         User/Robot_def
 )

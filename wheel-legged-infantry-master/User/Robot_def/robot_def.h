@@ -416,6 +416,12 @@ typedef struct{
 
     bool chassis_is_offground; // 离地标志位
     bool jump_flag;            // 跳跃标志位
+    bool power_is_dangerous;
+
+    float chassis_power_K;
+    float last_chassis_power_K;
+    float power_nihe;
+    float power_nihe2;
 
 } Chassis;
 

@@ -16,10 +16,9 @@ static CAN_RxHeaderTypeDef rx_msg;
 
 static uint8_t rx_data[9];
 
-double motor_iq_l,motor_w_l;
-double motor_iq_r,motor_w_r;
-double all_motor_iq,all_motor_w;
-float power_nihe;
+float motor_torque_l,motor_w_l;
+float motor_torque_r,motor_w_r;
+float all_motor_torque,all_motor_w;
 
 
 static void lk9025_register(Lk9025 *motor) {
@@ -124,7 +123,7 @@ void lk9025_can_msg_unpack(uint32_t id, uint8_t data[]) {
             iq_int = (int16_t) ((data)[3] << 8 | (data)[2]);
             motors[0]->angular_vel = speed_int * PI / 180;
             motors[0]->torque = (iq_int / LK_CURRENT_2_DATA) * LK_TORQUE_CONSTANT;
-            if (motors[0]->torque!=0)motor_iq_l = (iq_int/LK_CURRENT_2_DATA);
+            if (motors[0]->torque!=0)motor_torque_l = (iq_int/LK_CURRENT_2_DATA)*LK_TORQUE_CONSTANT;
             if (motors[0]->angular_vel!=0)motor_w_l=speed_int;//dps
             break;
         }
@@ -135,7 +134,7 @@ void lk9025_can_msg_unpack(uint32_t id, uint8_t data[]) {
             iq_int = (int16_t) ((data)[3] << 8 | (data)[2]);
             motors[1]->angular_vel = speed_int * PI / 180;
             motors[1]->torque = (iq_int / LK_CURRENT_2_DATA) * LK_TORQUE_CONSTANT;
-            if (motors[1]->torque!=0)motor_iq_r = (iq_int/LK_CURRENT_2_DATA);
+            if (motors[1]->torque!=0)motor_torque_r = (iq_int/LK_CURRENT_2_DATA)*LK_TORQUE_CONSTANT;
             if (motors[1]->angular_vel!=0)motor_w_r=speed_int;//dps
             break;
         }
