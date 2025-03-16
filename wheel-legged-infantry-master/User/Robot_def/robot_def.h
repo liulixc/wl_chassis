@@ -6,21 +6,21 @@
 #include "pid.h"
 #include "moving_filter.h"
 
-typedef float fp32; // ±íÃ÷Ä³¸öfloatÀàĞÍ±äÁ¿ÊÇ32Î»¸¡µãÊı
+typedef float fp32; // ï¿½ï¿½ï¿½ï¿½Ä³ï¿½ï¿½floatï¿½ï¿½ï¿½Í±ï¿½ï¿½ï¿½ï¿½ï¿½32Î»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 typedef double fp64;
 
-/** ºê¶¨Òå **/
-//CHASSIS_REMOTEÖÃ1£ºµ×ÅÌÓÉÒ£¿ØÆ÷¿ØÖÆ
+/** ï¿½ê¶¨ï¿½ï¿½ **/
+//CHASSIS_REMOTEï¿½ï¿½1ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 #define CHASSIS_REMOTE 1
 
-//DEBUG_MODEÖÃ1£º½øÈëµ÷ÊÔÄ£Ê½£¬¹Ø±Õ¹Ø½ÚºÍÂÖì±Êä³ö
+//DEBUG_MODEï¿½ï¿½1ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½ï¿½Ø±Õ¹Ø½Úºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 #define DEBUG_MODE 0
 
-#define CHASSIS_PERIOD 2 // ms ¿ØÖÆÆµÂÊ: 500Hz
+#define CHASSIS_PERIOD 2 // ms ï¿½ï¿½ï¿½ï¿½Æµï¿½ï¿½: 500Hz
 
-/** Ò£¿ØÆ÷Â·¾¶ **/
-// x : 2-×óÊÖ ; 0-ÓÒÊÖ
-// y : 3-×óÊÖ ; 1-ÓÒÊÖ
+/** Ò£ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ **/
+// x : 2-ï¿½ï¿½ï¿½ï¿½ ; 0-ï¿½ï¿½ï¿½ï¿½
+// y : 3-ï¿½ï¿½ï¿½ï¿½ ; 1-ï¿½ï¿½ï¿½ï¿½
 #define CHASSIS_SPEED_CHANNEL 1
 #define CHASSIS_YAW_CHANNEL 2
 #define TEST_CHASSIS_ROLL_CHANNEL 2
@@ -28,7 +28,7 @@ typedef double fp64;
 #define CHASSIS_PIT_CHANNEL 3
 #define CHASSIS_ROLL_CHANNEL 0
 
-/** ±äÁ¿Ô¼Êø **/
+/** ï¿½ï¿½ï¿½ï¿½Ô¼ï¿½ï¿½ **/
 #define MAX_CHASSIS_VX_SPEED 2.0f
 #define MAX_PITCH 0.174533f
 #define MIN_PITCH (-0.174533f)
@@ -43,113 +43,115 @@ typedef double fp64;
 #define MAX_L0 0.40f
 
 
-/** Ò£¿ØÆ÷ÖµÓ³Éä **/
+/** Ò£ï¿½ï¿½ï¿½ï¿½ÖµÓ³ï¿½ï¿½ **/
 #define RC_TO_VX  (MAX_CHASSIS_VX_SPEED/660)
 #define MAX_CHASSIS_YAW_INCREMENT 0.02f
 #define RC_TO_YAW_INCREMENT (MAX_CHASSIS_YAW_INCREMENT/660)
 #define RC_TO_PITCH ((MAX_PITCH-MIN_PITCH)/660)
 #define RC_TO_ROLL ((MAX_ROLL-MIN_ROLL)/660)
 
-/** PID²ÎÊı **/
-/** ×ªÏòPID **/
+/** PIDï¿½ï¿½ï¿½ï¿½ **/
+/** PIDï¿½ï¿½ï¿½ï¿½ **/
+/** ×ªï¿½ï¿½PID **/
 #define CHASSIS_TURN_PID_P 20.0f
 #define CHASSIS_TURN_PID_I 0.0f
 #define CHASSIS_TURN_PID_D 3.0f
 #define CHASSIS_TURN_PID_IOUT_LIMIT 0.0f
-#define CHASSIS_TURN_PID_OUT_LIMIT 100.0f
+#define CHASSIS_TURN_PID_OUT_LIMIT 4.0f
 
-///** ÍÈ³¤Î»ÖÃ»·PID **/
-//#define CHASSIS_LEG_L0_POS_PID_P 4.0f
-//#define CHASSIS_LEG_L0_POS_PID_I 0.0f
-//#define CHASSIS_LEG_L0_POS_PID_D 1.0f
-//#define CHASSIS_LEG_L0_POS_PID_IOUT_LIMIT 0.0f
-//#define CHASSIS_LEG_L0_POS_PID_OUT_LIMIT 20.0f
-//
-///** ÍÈ³¤ËÙ¶È»·PID **/
-//#define CHASSIS_LEG_L0_SPEED_PID_P 70.0f // 50.0f
-//#define CHASSIS_LEG_L0_SPEED_PID_I 5.0f
-//#define CHASSIS_LEG_L0_SPEED_PID_D 0.0f
-//#define CHASSIS_LEG_L0_SPEED_PID_IOUT_LIMIT 500.0f
-//#define CHASSIS_LEG_L0_SPEED_PID_OUT_LIMIT 1000.0f
-
-/** ÍÈ³¤Î»ÖÃ»·PID **/
+/** è…¿é•¿ä½ç½®ç¯PID **/
 #define CHASSIS_LEG_L0_POS_PID_P 15.0f
 #define CHASSIS_LEG_L0_POS_PID_I 0.0f
 #define CHASSIS_LEG_L0_POS_PID_D 15.0f
 #define CHASSIS_LEG_L0_POS_PID_IOUT_LIMIT 0.0f
-#define CHASSIS_LEG_L0_POS_PID_OUT_LIMIT 20.0f
+#define CHASSIS_LEG_L0_POS_PID_OUT_LIMIT 2.0f
 
-/** ÍÈ³¤ËÙ¶È»·PID **/
-#define CHASSIS_LEG_L0_SPEED_PID_P 50.0f // 50.0f
+/** è…¿é•¿é€Ÿåº¦ç¯PID **/
+#define CHASSIS_LEG_L0_SPEED_PID_P 30.0f // 50.0f
 #define CHASSIS_LEG_L0_SPEED_PID_I 0.0f
 #define CHASSIS_LEG_L0_SPEED_PID_D 0.0f
 #define CHASSIS_LEG_L0_SPEED_PID_IOUT_LIMIT 0.0f
-#define CHASSIS_LEG_L0_SPEED_PID_OUT_LIMIT 1000.0f
+#define CHASSIS_LEG_L0_SPEED_PID_OUT_LIMIT 60.0f
 
 /** Roll PID **/
-#define CHASSIS_ROLL_PID_P 150.0f
+#define CHASSIS_ROLL_PID_P 40.0f
 #define CHASSIS_ROLL_PID_I 0.0f
 #define CHASSIS_ROLL_PID_D 0.0f
 #define CHASSIS_ROLL_PID_IOUT_LIMIT 0.0f
-#define CHASSIS_ROLL_PID_OUT_LIMIT 2000.0f
+#define CHASSIS_ROLL_PID_OUT_LIMIT 20.0f
 
-/** ÀëµØºóµÄÍÈ³¤PID **/
+/** ç¦»åœ°åçš„è…¿é•¿PID **/
 #define CHASSIS_OFFGROUND_LO_PID_P 0.0f
 #define CHASSIS_OFFGROUND_L0_PID_I 0.0f
 #define CHASSIS_OFFGROUND_L0_PID_D 0.0f
 #define CHASSIS_OFFGROUND_L0_PID_IOUT_LIMIT 0.0f
 #define CHASSIS_OFFGROUND_L0_PID_OUT_LIMIT 0.0f
 
-/** ·ÀÅü²æPID **/
-#define CHASSIS_LEG_COORDINATION_PID_P 110.0f
+/** é˜²åŠˆå‰PID **/
+#define CHASSIS_LEG_COORDINATION_PID_P 15.0f
 #define CHASSIS_LEG_COORDINATION_PID_I 0.0f
-#define CHASSIS_LEG_COORDINATION_PID_D 20.0f
+#define CHASSIS_LEG_COORDINATION_PID_D 2.0f
 #define CHASSIS_LEG_COORDINATION_PID_IOUT_LIMIT 0.0f
-#define CHASSIS_LEG_COORDINATION_PID_OUT_LIMIT 50.0f
+#define CHASSIS_LEG_COORDINATION_PID_OUT_LIMIT 10.0f
 
 
 /*******************************************************************************
- *                                    µ×ÅÌ                                     *
+ *                                    ï¿½ï¿½ï¿½ï¿½                                     *
  *******************************************************************************/
 
-/** µ×ÅÌÎïÀí²ÎÊı½á¹¹Ìå **/
+/** ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½á¹¹ï¿½ï¿½ **/
 typedef struct{
-    float wheel_radius; // Çı¶¯ÂÖ°ë¾¶
-    float body_weight; // »úÌåÖÊÁ¿(ÓĞÔÆÌ¨ÒªËãÉÏÔÆÌ¨)
-    float wheel_weight; // Çı¶¯ÂÖÖØÁ¿(ËãÉÏµç»ú)
+    float wheel_radius; // ï¿½ï¿½ï¿½ï¿½ï¿½Ö°ë¾¶
+    float body_weight; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½Ì¨Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì¨)
+    float wheel_weight; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½ï¿½Ïµï¿½ï¿½)
 
-    float l1, l2, l3, l4, l5; // ÎåÁ¬¸Ë²ÎÊı
+    float l1, l2, l3, l4, l5; // ï¿½ï¿½ï¿½ï¿½ï¿½Ë²ï¿½ï¿½ï¿½
 } ChassisPhysicalConfig;
 
-/** µ×ÅÌÄ£Ê½½á¹¹Ìå **/
+/** ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½á¹¹ï¿½ï¿½ **/
 //typedef enum{
-//    CHASSIS_DISABLE = 1, // Ê§ÄÜÄ£Ê½
-//    CHASSIS_INIT, // ³õÊ¼»¯Ä£Ê½
-//    CHASSIS_ENABLE, // Ê¹ÄÜÄ£Ê½
-//    CHASSIS_JUMP, // ÌøÔ¾Ä£Ê½
-//    CHASSIS_SPIN, // Ğ¡ÍÓÂİ
+//    CHASSIS_DISABLE = 1, // Ê§ï¿½ï¿½Ä£Ê½
+//    CHASSIS_INIT, // ï¿½ï¿½Ê¼ï¿½ï¿½Ä£Ê½
+//    CHASSIS_ENABLE, // Ê¹ï¿½ï¿½Ä£Ê½
+//    CHASSIS_JUMP, // ï¿½ï¿½Ô¾Ä£Ê½
+//    CHASSIS_SPIN, // Ğ¡ï¿½ï¿½ï¿½ï¿½
 //} ChassisCtrlMode;
 
 typedef enum{
-    CHASSIS_DISABLE = 1, // Ê§ÄÜÄ£Ê½
-    CHASSIS_ENABLE, // Ê¹ÄÜÄ£Ê½
-    CHASSIS_SPIN, // Ğ¡ÍÓÂİ
-    CHASSIS_INIT, // ³õÊ¼»¯Ä£Ê½
-    CHASSIS_JUMP, // ÌøÔ¾Ä£Ê½
+    CHASSIS_DISABLE = 1, // Ê§ï¿½ï¿½Ä£Ê½
+    CHASSIS_ENABLE, // Ê¹ï¿½ï¿½Ä£Ê½
+    CHASSIS_SPIN, // Ğ¡ï¿½ï¿½ï¿½ï¿½
+    CHASSIS_INIT, // ï¿½ï¿½Ê¼ï¿½ï¿½Ä£Ê½
+    CHASSIS_JUMP, // ï¿½ï¿½Ô¾Ä£Ê½
 } ChassisCtrlMode;
 
-/** ÌøÔ¾×´Ì¬½á¹¹Ìå **/
+typedef enum{
+    GIMBAL_RELAX=0,//äº‘å°å¤±èƒ½
+    GIMBAL_BACK,//äº‘å°å›ä¸­
+    GIMBAL_ACTIVE,
+    GIMBAL_AUTO,
+    GIMBAL_BUFF, //å¤§ç¬¦
+    GIMBAL_SBUFF, //å°ç¬¦
+    GIMBAL_FORECAST,//é¢„æµ‹
+} GimbalCtrlMode;
+
+typedef struct {
+    int16_t fire_l_speed_rpm;
+    int16_t fire_r_speed_rpm;
+} LauncherCtrlInfo;
+
+/** ï¿½ï¿½Ô¾×´Ì¬ï¿½á¹¹ï¿½ï¿½ **/
 typedef enum{
     NOT_READY,
-    READY, // µÚÒ»½×¶Î£ºÊÕÍÈĞîÁ¦
-    STRETCHING, // µÚ¶ş½×¶Î£ºÉìÍÈµÅµØ
-    SHRINKING, // µÚÈı½×¶Î£º¿ÕÖĞÊÕÍÈ
-    LANDING, // µÚËÄ½×¶Î£ºÂäµØ
+    READY, // ï¿½ï¿½Ò»ï¿½×¶Î£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    STRETCHING, // ï¿½Ú¶ï¿½ï¿½×¶Î£ï¿½ï¿½ï¿½ï¿½ÈµÅµï¿½
+    SHRINKING, // ï¿½ï¿½ï¿½ï¿½ï¿½×¶Î£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    LANDING, // ï¿½ï¿½ï¿½Ä½×¶Î£ï¿½ï¿½ï¿½ï¿½
 } JumpState;
 
-/** ´«¸ĞÆ÷½á¹¹Ìå **/
+/** ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½á¹¹ï¿½ï¿½ **/
 typedef struct{
-    // Å·À­½Ç
+    // Å·ï¿½ï¿½ï¿½ï¿½
     float roll_angle;
     float pitch_angle;
     float yaw_angle;
@@ -158,58 +160,58 @@ typedef struct{
     float yaw_round_count;
 
 
-    //ÈıÖá½ÇËÙ¶È
+    //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½
     float pitch_gyro;
     float yaw_gyro;
     float roll_gyro;
 
-    //ÈıÖá¼ÓËÙ¶È
+    //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½
     float ax;
     float ay;
     float az;
 
-    //È¥³ıÖØÁ¦¼ÓËÙ¶ÈÓ°ÏìºóµÄÈıÖá¼ÓËÙ¶È
+    //È¥ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½Ó°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½
     float ax_filtered;
     float ay_filtered;
     float az_filtered;
 
-    // »úÌåÊúÖ±ÏòÉÏµÄ¼ÓËÙ¶È
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö±ï¿½ï¿½ï¿½ÏµÄ¼ï¿½ï¿½Ù¶ï¿½
     float robot_az;
 
 } IMUReference;
 
 typedef struct{
-    float v_m_per_s; // ÆÚÍûËÙ¶È
-    float x; // ÆÚÍûÎ»ÒÆ
+    float v_m_per_s; // ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½
+    float x; // ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½
     float pitch_angle_rad;
     float yaw_angle_rad;
     float roll_angle_rad;
-    float height_m; // ÆÚÍûÍÈ³¤
+    float height_m; // ï¿½ï¿½ï¿½ï¿½ï¿½È³ï¿½
     float spin_speed;
 
 } ChassisCtrlInfo;
 
-/** ×´Ì¬±äÁ¿½á¹¹Ìå **/
+/** ×´Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½á¹¹ï¿½ï¿½ **/
 typedef struct{
-    float theta; // ×´Ì¬±äÁ¿1
-    float theta_dot; // ×´Ì¬±äÁ¿2
+    float theta; // ×´Ì¬ï¿½ï¿½ï¿½ï¿½1
+    float theta_dot; // ×´Ì¬ï¿½ï¿½ï¿½ï¿½2
     float theta_last;
     float theta_dot_last;
     float theta_ddot;
 
-    float x; // ×´Ì¬±äÁ¿3
-    float x_dot; // ×´Ì¬±äÁ¿4
+    float x; // ×´Ì¬ï¿½ï¿½ï¿½ï¿½3
+    float x_dot; // ×´Ì¬ï¿½ï¿½ï¿½ï¿½4
     float x_dot_last;
     float x_ddot;
 
-    float phi; // ×´Ì¬±äÁ¿5
-    float phi_dot; // ×´Ì¬±äÁ¿6
+    float phi; // ×´Ì¬ï¿½ï¿½ï¿½ï¿½5
+    float phi_dot; // ×´Ì¬ï¿½ï¿½ï¿½ï¿½6
 } StateVariable;
 
 /** VMC VMC VMC VMC VMC VMC VMC VMC VMC VMC VMC VMC VMC VMC VMC VMC VMC VMC **/
 
-/** ÕıÔË¶¯Ñ§½âËã  FK == Forward Kinematics(ÕıÔË¶¯Ñ§) **/
-typedef struct{// ÍÈ³¤
+/** ï¿½ï¿½ï¿½Ë¶ï¿½Ñ§ï¿½ï¿½ï¿½ï¿½  FK == Forward Kinematics(ï¿½ï¿½ï¿½Ë¶ï¿½Ñ§) **/
+typedef struct{// ï¿½È³ï¿½
     float L0;
     float L0_last;
     float L0_dot;
@@ -217,20 +219,20 @@ typedef struct{// ÍÈ³¤
     float L0_ddot;
 } FKL0;
 
-typedef struct{// ÎåÁ¬¸ËÖĞµÄ½Ç¶È
+typedef struct{// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ĞµÄ½Ç¶ï¿½
     float phi1;
     float phi2;
     float phi3;
     float phi4;
 
-    float phi0; // ÍÈ°Ú½Ç
+    float phi0; // ï¿½È°Ú½ï¿½
     float last_phi0;
-    float d_phi0;// °Ú½Ç±ä»¯ËÙ¶È
+    float d_phi0;// ï¿½Ú½Ç±ä»¯ï¿½Ù¶ï¿½
     float last_d_phi0;
     float dd_phi0;
 } FKPhi;
 
-typedef struct{// ÎåÁ¬¸ËÖĞµÄµã×ø±ê(Coordinates)
+typedef struct{// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ĞµÄµï¿½ï¿½ï¿½ï¿½ï¿½(Coordinates)
     float a_x, a_y;
     float b_x, b_y;
     float c_x, c_y;
@@ -244,8 +246,8 @@ typedef struct{
     FKPointCoordinates fk_point_coordinates;
     float d_alpha; // ?
 
-/** Õı¶¯Á¦Ñ§½âËã(Forward Dynamics)£º´Ó Ä©¶ËÁ¦(F Tp) µ½ Ä©¶ËÖ´ĞĞÆ÷(T1 T4) **/
-    union { // ×ÔĞĞÑ§Ï°ÁªºÏÌåµÄÌØĞÔ: union
+/** ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ§ï¿½ï¿½ï¿½ï¿½(Forward Dynamics)ï¿½ï¿½ï¿½ï¿½ Ä©ï¿½ï¿½ï¿½ï¿½(F Tp) ï¿½ï¿½ Ä©ï¿½ï¿½Ö´ï¿½ï¿½ï¿½ï¿½(T1 T4) **/
+    union { // ï¿½ï¿½ï¿½ï¿½Ñ§Ï°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½: union
         float array[2][2];
         struct {
             float Tp_set_point;
@@ -274,7 +276,7 @@ typedef struct{
 } ForwardKinematics;
 
 
-/** Äæ¶¯Á¦Ñ§½âËã(Inverse Dynamics): ´Ó Ä©¶ËÖ´ĞĞÆ÷(T1 T4) µ½ Ä©¶ËÁ¦(T Tp) **/
+/** ï¿½æ¶¯ï¿½ï¿½Ñ§ï¿½ï¿½ï¿½ï¿½(Inverse Dynamics): ï¿½ï¿½ Ä©ï¿½ï¿½Ö´ï¿½ï¿½ï¿½ï¿½(T1 T4) ï¿½ï¿½ Ä©ï¿½ï¿½ï¿½ï¿½(T Tp) **/
 typedef struct {
     union {
         float array[2][1];
@@ -302,11 +304,11 @@ typedef struct {
         } E;
     } Fxy_fdb;
 
- /** ÄæÔË¶¯Ñ§½âËã(Inverse Dynamics): ´Ó Ä©¶ËÖ´ĞĞÆ÷(w1 w4) µ½ Ä©¶Ë±àÂë(d_L0 d_phi0) **/
+ /** ï¿½ï¿½ï¿½Ë¶ï¿½Ñ§ï¿½ï¿½ï¿½ï¿½(Inverse Dynamics): ï¿½ï¿½ Ä©ï¿½ï¿½Ö´ï¿½ï¿½ï¿½ï¿½(w1 w4) ï¿½ï¿½ Ä©ï¿½Ë±ï¿½ï¿½ï¿½(d_L0 d_phi0) **/
     union {
         float array[2][1];
         struct {
-            float w1_fdb;// ¹Ø½Úµç»ú·´À¡»ØÀ´µÄ½ÇËÙ¶È
+            float w1_fdb;// ï¿½Ø½Úµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä½ï¿½ï¿½Ù¶ï¿½
             float w4_fdb;
         } E;
     } W_fdb;
@@ -324,14 +326,14 @@ typedef struct {
     union {
         float array[2][1];
         struct {
-            float d_L0_fdb; // ÍÈ³¤±ä»¯ËÙ¶È
-            float d_phi0_fdb; // °Ú½Ç(phi0)±ä»¯ËÙ¶È
+            float d_L0_fdb; // ï¿½È³ï¿½ï¿½ä»¯ï¿½Ù¶ï¿½
+            float d_phi0_fdb; // ï¿½Ú½ï¿½(phi0)ï¿½ä»¯ï¿½Ù¶ï¿½
         } E;
     } V_fdb;
 
 }InverseKinematics;
 
-/** ÍÈ²¿VMC½á¹¹Ìå **/
+/** ï¿½È²ï¿½VMCï¿½á¹¹ï¿½ï¿½ **/
 typedef struct{
     ForwardKinematics forward_kinematics;
     InverseKinematics inverse_kinematics;
@@ -340,82 +342,82 @@ typedef struct{
 
 
 
-/** ÍÈ²¿½á¹¹Ìå **/
+/** ï¿½È²ï¿½ï¿½á¹¹ï¿½ï¿½ **/
 typedef struct{
 
     ChassisCtrlInfo chassis_ctrl_info;
 
-    /** ×´Ì¬±äÁ¿ **/
-    StateVariable state_variable_feedback;  // ·´À¡×´Ì¬±äÁ¿
-    StateVariable state_variable_set_point; // ÆÚÍû×´Ì¬±äÁ¿
-    StateVariable state_variable_error;     // Îó²î = ·´À¡ - ÆÚÍû
-    StateVariable state_variable_wheel_out; // ¸÷¸ö×´Ì¬±äÁ¿Í¨¹ılqr¼ÆËãµÄ¹ØÓÚÂÖì±µÄÊä³ö
-    StateVariable state_variable_joint_out; // ¸÷¸ö×´Ì¬±äÁ¿Í¨¹ılqr¼ÆËãµÄ¹ØÓÚ¹Ø½ÚµÄÊä³ö
+    /** ×´Ì¬ï¿½ï¿½ï¿½ï¿½ **/
+    StateVariable state_variable_feedback;  // ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½
+    StateVariable state_variable_set_point; // ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½
+    StateVariable state_variable_error;     // ï¿½ï¿½ï¿½ = ï¿½ï¿½ï¿½ï¿½ - ï¿½ï¿½ï¿½ï¿½
+    StateVariable state_variable_wheel_out; // ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½lqrï¿½ï¿½ï¿½ï¿½Ä¹ï¿½ï¿½ï¿½ï¿½ï¿½ì±µï¿½ï¿½ï¿½ï¿½
+    StateVariable state_variable_joint_out; // ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½lqrï¿½ï¿½ï¿½ï¿½Ä¹ï¿½ï¿½Ú¹Ø½Úµï¿½ï¿½ï¿½ï¿½
 
-    /** ÍÈ²¿VMC **/
+    /** ï¿½È²ï¿½VMC **/
     VMC vmc;
 
-    /** ÍÈ³¤´®¼¶PID **/
-    Pid leg_pos_pid; // ÍÈ³¤Î»ÖÃ»·
-    Pid leg_speed_pid; // ÍÈ³¤ËÙ¶È»·
-    float leg_offset; // ¡°Ãæ¶Ô½á¹û±à³Ì¡±
+    /** ï¿½È³ï¿½ï¿½ï¿½ï¿½ï¿½PID **/
+    Pid leg_pos_pid; // ï¿½È³ï¿½Î»ï¿½Ã»ï¿½
+    Pid leg_speed_pid; // ï¿½È³ï¿½ï¿½Ù¶È»ï¿½
+    float leg_offset; // ï¿½ï¿½ï¿½ï¿½Ô½ï¿½ï¿½ï¿½ï¿½Ì¡ï¿½
 
-    /** ÀëµØºóµÄÍÈ³¤PID **/
-    Pid offground_leg_pid; // ÀëµØºóµÄÍÈ³¤pid  Ê¹ÍÈ¾¡Á¿½Ó½üµØÃæ£¬Ôö¼Ó»º³å
+    /** ï¿½ï¿½Øºï¿½ï¿½ï¿½È³ï¿½PID **/
+    Pid offground_leg_pid; // ï¿½ï¿½Øºï¿½ï¿½ï¿½È³ï¿½pid  Ê¹ï¿½È¾ï¿½ï¿½ï¿½ï¿½Ó½ï¿½ï¿½ï¿½ï¿½æ£¬ï¿½ï¿½ï¿½Ó»ï¿½ï¿½ï¿½
 
-    float wheel_torque; // ÂÖì±Á¦¾Ø
-    float joint_F_torque; // ¹Ø½ÚÁ¦¾Ø
+    float wheel_torque; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    float joint_F_torque; // ï¿½Ø½ï¿½ï¿½ï¿½ï¿½ï¿½
     float joint_B_torque;
 
 
-    /** ÊúÖ±·½ÏòÖ§³ÖÁ¦ **/
-    MovingAverageFilter theta_ddot_filter; // dd_thetaµÄÒÆ¶¯Æ½¾ùÂË²¨Æ÷, ÓÃÓÚ¼ÆËãÊúÖ±·½ÏòÖ§³ÖÁ¦Fn
-    MovingAverageFilter Fn_filter; // ÊúÖ±·½ÏòÖ§³ÖÁ¦FnµÄÒÆ¶¯Æ½¾ùÂË²¨Æ÷
-    float Fn; // ÊúÖ±·½ÏòÖ§³ÖÁ¦
+    /** ï¿½ï¿½Ö±ï¿½ï¿½ï¿½ï¿½Ö§ï¿½ï¿½ï¿½ï¿½ **/
+    MovingAverageFilter theta_ddot_filter; // dd_thetaï¿½ï¿½ï¿½Æ¶ï¿½Æ½ï¿½ï¿½ï¿½Ë²ï¿½ï¿½ï¿½, ï¿½ï¿½ï¿½Ú¼ï¿½ï¿½ï¿½ï¿½ï¿½Ö±ï¿½ï¿½ï¿½ï¿½Ö§ï¿½ï¿½ï¿½ï¿½Fn
+    MovingAverageFilter Fn_filter; // ï¿½ï¿½Ö±ï¿½ï¿½ï¿½ï¿½Ö§ï¿½ï¿½ï¿½ï¿½Fnï¿½ï¿½ï¿½Æ¶ï¿½Æ½ï¿½ï¿½ï¿½Ë²ï¿½ï¿½ï¿½
+    float Fn; // ï¿½ï¿½Ö±ï¿½ï¿½ï¿½ï¿½Ö§ï¿½ï¿½ï¿½ï¿½
 
     bool leg_is_offground;
 
 } Leg;
 
-/** µ×ÅÌ½á¹¹Ìå **/
+/** ï¿½ï¿½ï¿½Ì½á¹¹ï¿½ï¿½ **/
 typedef struct{
 
-    /** ´«¸ĞÆ÷ **/
+    /** ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ **/
     IMUReference imu_reference;
     MovingAverageFilter robot_az_filter;
 
-    /** Ò£¿ØÆ÷ĞÅÏ¢ **/
+    /** Ò£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ **/
     ChassisCtrlMode chassis_ctrl_mode;
     ChassisCtrlMode chassis_ctrl_mode_last;
     ChassisCtrlInfo chassis_ctrl_info;
 
-    /** ÍÈ²¿ **/
+    /** ï¿½È²ï¿½ **/
     Leg leg_L;
     Leg leg_R;
 
-    /** ÌøÔ¾ **/
+    /** ï¿½ï¿½Ô¾ **/
     JumpState jump_state;
 
     /** PID **/
-    Pid chassis_turn_pid;             // ×ªÏòpid
-    Pid chassis_leg_coordination_pid; // ·ÀÅü²æpid
-    Pid chassis_roll_pid;             // roll²¹³¥pid
-    float wheel_turn_torque;          // ×ªÏòÁ¦¾Ø
-    float steer_compensatory_torque;  // ·ÀÅü²æÁ¦¾Ø
-    float theta_error;                // Á½ÌõÍÈÖ®¼äthetaµÄÎó²î
+    Pid chassis_turn_pid;             // ×ªï¿½ï¿½pid
+    Pid chassis_leg_coordination_pid; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½pid
+    Pid chassis_roll_pid;             // rollï¿½ï¿½ï¿½ï¿½pid
+    float wheel_turn_torque;          // ×ªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    float steer_compensatory_torque;  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    float theta_error;                // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö®ï¿½ï¿½thetaï¿½ï¿½ï¿½ï¿½ï¿½
     Pid chassis_vw_speed_pid;
     Pid chassis_vw_pos_pid;
     Pid chassis_spin_pid;
 
 
     /** flag **/
-    bool init_flag;            // µ×ÅÌ³õÊ¼»¯Íê³É±êÖ¾Î»
+    bool init_flag;            // ï¿½ï¿½ï¿½Ì³ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½É±ï¿½Ö¾Î»
 
-    bool is_chassis_balance;   // Æ½ºâ±êÖ¾Î»
-    bool recover_finish;       // µ¹µØ×ÔÆğÍê³É±êÖ¾Î»
+    bool is_chassis_balance;   // Æ½ï¿½ï¿½ï¿½Ö¾Î»
+    bool recover_finish;       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É±ï¿½Ö¾Î»
 
-    bool chassis_is_offground; // ÀëµØ±êÖ¾Î»
-    bool jump_flag;            // ÌøÔ¾±êÖ¾Î»
+    bool chassis_is_offground; // ï¿½ï¿½Ø±ï¿½Ö¾Î»
+    bool jump_flag;            // ï¿½ï¿½Ô¾ï¿½ï¿½Ö¾Î»
     bool power_is_dangerous;
 
     float chassis_power_K;
@@ -428,23 +430,23 @@ typedef struct{
 
 
 /*******************************************************************************
- *                                    ÔÆÌ¨                                     *
+ *                                    ï¿½ï¿½Ì¨                                     *
  *******************************************************************************/
 
 
-////ÔÆÌ¨µç»úµÄ·´À¡Á¿
+////ï¿½ï¿½Ì¨ï¿½ï¿½ï¿½ï¿½Ä·ï¿½ï¿½ï¿½ï¿½ï¿½
 //typedef struct
 //{
-//    uint16_t ecd; // ±àÂëÆ÷Öµ
+//    uint16_t ecd; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµ
 //    int16_t last_ecd;
-//    int16_t speed_rpm; // ·´À¡»ØÀ´µÄ×ªËÙ
-//    int16_t feedback_current; // Ê©¼ÓÔÚµç»úÉÏµÄµçÁ÷
-//    uint8_t temperate; // ÎÂ¶È
+//    int16_t speed_rpm; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½
+//    int16_t feedback_current; // Ê©ï¿½ï¿½ï¿½Úµï¿½ï¿½ï¿½ÏµÄµï¿½ï¿½ï¿½
+//    uint8_t temperate; // ï¿½Â¶ï¿½
 //
-//    int32_t round_cnt;   //µç»úĞı×ªµÄ×ÜÈ¦Êı
-//    int32_t total_ecd;   //µç»úĞı×ªµÄ×Ü±àÂëÆ÷Öµ
+//    int32_t round_cnt;   //ï¿½ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½ï¿½ï¿½È¦ï¿½ï¿½
+//    int32_t total_ecd;   //ï¿½ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½ï¿½Ü±ï¿½ï¿½ï¿½ï¿½ï¿½Öµ
 //
-//    uint16_t offset_ecd;//µç»úµÄĞ£×¼±àÂëÖµ
+//    uint16_t offset_ecd;//ï¿½ï¿½ï¿½ï¿½ï¿½Ğ£×¼ï¿½ï¿½ï¿½ï¿½Öµ
 //} motor_measure_t;
 //
 //typedef struct
@@ -466,17 +468,17 @@ typedef struct{
 //{
 //    motor_measure_t *motor_measure;
 //
-//    pid_t angle_pos_pid; // ÔÆÌ¨½Ç¶ÈÎ»ÖÃ»·pid
-//    pid_t angle_speed_pid; // ÔÆÌ¨½Ç¶ÈËÙ¶È»·pid
+//    pid_t angle_pos_pid; // ï¿½ï¿½Ì¨ï¿½Ç¶ï¿½Î»ï¿½Ã»ï¿½pid
+//    pid_t angle_speed_pid; // ï¿½ï¿½Ì¨ï¿½Ç¶ï¿½ï¿½Ù¶È»ï¿½pid
 //
 //    fp32 relative_angle_get;
-//    fp32 relative_angle_set; //¡ã
+//    fp32 relative_angle_set; //ï¿½ï¿½
 //
 //    fp32 absolute_angle_get;
 //    fp32 absolute_angle_set;//rad
 //
-//    fp32 gyro_set;  //×ªËÙÉèÖÃ
-//    int16_t give_current; //×îÖÕµçÁ÷Öµ
+//    fp32 gyro_set;  //×ªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+//    int16_t give_current; //ï¿½ï¿½ï¿½Õµï¿½ï¿½ï¿½Öµ
 //
 //}motor_6020_t;
 //
@@ -485,11 +487,11 @@ typedef struct{
 //{
 //    motor_measure_t *motor_measure;
 //
-//    pid_t angle_p;//½Ç¶È»·pid
+//    pid_t angle_p;//ï¿½Ç¶È»ï¿½pid
 //
-//    pid_t speed_p;//ËÙ¶È»·pid
+//    pid_t speed_p;//ï¿½Ù¶È»ï¿½pid
 //
-//    fp32 speed;//×ªËÙÆÚÍûÖµ
+//    fp32 speed;//×ªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµ
 //
 //    int16_t give_current;
 //

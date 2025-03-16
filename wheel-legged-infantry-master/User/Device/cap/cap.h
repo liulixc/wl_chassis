@@ -14,19 +14,23 @@ typedef enum
     CAP_EXCEED_MODE_ENABLE = 0x01,
     CAP_INIT_MODE_24V = 0x00,
     CAP_INIT_MODE_28V = 0x01,
-//    CAP_INIT_MODE_30V = 0x02,         //30VÎ£ÏÕ!!!
+//    CAP_INIT_MODE_30V = 0x02,         //30Vå±é™©!!!
     CAP_MODE_SILENT = 0x00,
     CAP_MODE_WORK = 0x01,
     CAP_MODE_CHARGE = 0x02,
     CAP_INIT_FINISHED = 0xFF,
-    CAP_INIT_FAILURE = 0x00,
+    CAP_INIT_FAILURED = 0x00,
 
+}Cap_mode_e;
+
+typedef enum
+{
     CAP_ERR_FEEDBACK_ID = 0x001,
     CAP_INIT_ID = 0x002,
     CAP_INFO_FEEDBACK_ID = 0x003,
     CAP_CONTROL_ID = 0x004,
     CAP_INIT_FEEDBACK_ID = 0x005
-}Cap_e;
+}Cap_id_e;
 
 typedef enum
 {
@@ -43,16 +47,16 @@ typedef enum
 
 typedef struct
 {
-    uint16_t esr_v;         //ESRĞŞÕıºóµÄµçÈİ×éµçÑ¹
-    uint8_t work_s1;        //¹¤×÷Ç¿¶È1
-    uint8_t work_s2;        //¹¤×÷Ç¿¶È2
-    uint16_t input_power;   //µçÔ´ÊäÈë¹¦ÂÊ
+    uint16_t esr_v;         //ESRä¿®æ­£åçš„ç”µå®¹ç»„ç”µå‹
+    uint8_t work_s1;        //å·¥ä½œå¼ºåº¦1
+    uint8_t work_s2;        //å·¥ä½œå¼ºåº¦2
+    uint16_t input_power;   //ç”µæºè¾“å…¥åŠŸç‡
 }cap_feedback_t;
 
 typedef struct
 {
-    uint8_t can_init_state;     //¿ØÖÆÆ÷ÊÇ·ñ×¼±¸¾ÍĞ÷
-    uint8_t err_state[8];       //·´À¡´íÎóÖ¡±êÖ¾Î»
+    uint8_t can_init_state;     //æ§åˆ¶å™¨æ˜¯å¦å‡†å¤‡å°±ç»ª
+    uint8_t err_state[8];       //åé¦ˆé”™è¯¯å¸§æ ‡å¿—ä½
     cap_feedback_t capFeedback;
 }cap_data_t;
 

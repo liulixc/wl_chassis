@@ -13,14 +13,14 @@ static CAN_TxHeaderTypeDef tx_msg = {0x00, 0, CAN_ID_STD, CAN_RTR_DATA, 0x08, DI
 static CAN_RxHeaderTypeDef rx_msg;
 static uint8_t rx_data[9];
 
-static GimbalMsg gimbal_msg;
+GimbalMsg gimbal_msg;
 
 extern Chassis chassis;
 
 
 
-/******************* µ×ÅÌÏòÔÆÌ¨C°å·¢ËÍµ×ÅÌ´«¸ÐÆ÷Êý¾Ý **********************
-                            Ö¡¸ñÊ½
+/******************* ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì¨Cï¿½å·¢ï¿½Íµï¿½ï¿½Ì´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ **********************
+                            Ö¡ï¿½ï¿½Ê½
                      ------------------------------------------------
 Pitch(uint32_t) :   |  data[0]  |  data[1]  |  data[2]  |  data[3]  |
                     ------------------------------------------------
@@ -123,7 +123,7 @@ void gimbal_msg_unpack(uint32_t id, uint8_t data[]) {
  *                                    Task                                     *
  *******************************************************************************/
 
-/********* µ×ÅÌÓëÔÆÌ¨½»»¥ÈÎÎñ ***********/
+/********* ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ***********/
 extern void gimbal_task(void const *pvParameters) {
 
   TickType_t last_wake_time = xTaskGetTickCount();
@@ -132,7 +132,7 @@ extern void gimbal_task(void const *pvParameters) {
                            CHASSIS_ANGLE_VEL_INFO,
                            chassis.imu_reference.pitch_angle,
                            chassis.imu_reference.yaw_angle);;
-//ÎªÉ¶ÕâÀï·¢µÄÊÇ½ÇËÙ¶È??
+//ÎªÉ¶ï¿½ï¿½ï¿½ï·¢ï¿½ï¿½ï¿½Ç½ï¿½ï¿½Ù¶ï¿½??
     vTaskDelayUntil(&last_wake_time, 5);
   }
 }

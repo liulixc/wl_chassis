@@ -9,16 +9,16 @@
 
 extern Chassis chassis;
 
-extern float vel_acc[2]; // ÂÖì±ËÙ¶ÈÓë¼ÓËÙ¶ÈÈÚºÏºóµÄ½á¹û
+extern float vel_acc[2]; // ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½ï¿½ÚºÏºï¿½Ä½ï¿½ï¿½
 
-// ³õÊ¼»¯K¾ØÕó
+// ï¿½ï¿½Ê¼ï¿½ï¿½Kï¿½ï¿½ï¿½ï¿½
 float wheel_K_L[6] = {0, 0, 0, 0, 0, 0};
 float joint_K_L[6] = {0, 0, 0, 0, 0, 0};
 
 float wheel_K_R[6] = {0, 0, 0, 0, 0, 0};
 float joint_K_R[6] = {0, 0, 0, 0, 0, 0};
 
-//// KÄâºÏÏµÊý¾ØÕó
+//// Kï¿½ï¿½ï¿½Ïµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 //float wheel_fitting_factor[6][4] = {
 //        {-447.449990f,434.349545f,-164.370790f,-19.662140f},
 //        {-15.605339f,15.300158f,-15.996877f,-0.423120f},
@@ -39,25 +39,25 @@ float joint_K_R[6] = {0, 0, 0, 0, 0, 0};
 //        {116.286257f,-110.346952f,35.827832f,4.916953f}
 //};
 
-// KÄâºÏÏµÊý¾ØÕó
+// Kæ‹Ÿåˆç³»æ•°çŸ©é˜µ
 float wheel_fitting_factor[6][4] = {
-        {-335.161706f,331.668442f,-130.672827f,-15.285312f},
-        {-11.306932f,11.104124f,-12.297899f,-0.494467f},
+        {-150.753733f,177.082591f,-91.528531f,-8.435807f},
+        {-3.996172f,5.081981f,-6.719929f,-0.521003f},
 
-        {-26.718686f,24.006307f,-7.067014f,-2.142302f},
-        {-5.013206f,0.199448f,1.971923f,-5.404380f},
+        {-1.632511f,1.779984f,-0.644603f,-0.783029f},
+        {33.069586f,-32.986441f,11.883624f,-4.013479f},
 
-        {-3911.754884f,3868.923372f,-1327.673200f,167.465128f},
-        {-88.666956f,93.149625f,-35.506665f,5.874663f}
+        {-1054.928865f,1294.797181f,-620.326922f,121.755582f},
+        {-33.457576f,41.309742f,-21.031998f,6.270999f}
 };float joint_fitting_factor[6][4] = {
-        {-984.197667f,979.353102f,-338.507951f,45.663197f},
-        {-47.721937f,49.503126f,-18.646250f,2.641320f},
+        {-162.598870f,210.160232f,-99.163230f,43.658213f},
+        {3.522881f,1.627326f,-7.384171f,2.021930f},
 
-        {-140.967946f,139.142224f,-47.502665f,5.857874f},
-        {-325.320989f,313.237817f,-103.176532f,12.089909f},
+        {-1.554292f,7.636546f,-6.467850f,1.396758f},
+        {-75.851024f,89.950656f,-40.007450f,6.232503f},
 
-        {4082.422009f,-3679.185526f,1089.109611f,270.800046f},
-        {98.666273f,-92.861177f,29.883235f,5.634816f}
+        {4148.256474f,-4162.286391f,1449.279516f,298.360786f},
+        {96.232316f,-106.387739f,45.381791f,6.996710f}
 };
 
 void chassis_K_matrix_fitting(float L0, float K[6], const float KL[6][4]) {
@@ -66,7 +66,7 @@ void chassis_K_matrix_fitting(float L0, float K[6], const float KL[6][4]) {
   }
 }
 
-// ¼ÆËã×´Ì¬±äÁ¿theta
+// ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½theta
 static float cal_leg_theta(float phi0, float phi) {
   float theta = 0, alpha = 0;//alpha is the Angle at which the virtual joint motor is turned
   alpha = PI / 2 - phi0;
@@ -187,21 +187,21 @@ static void state_variable_error(Leg *leg_L, Leg *leg_R) {
 
 static void state_variable_out(Leg* leg_L, Leg* leg_R) {
 
-  leg_L->state_variable_wheel_out.theta = leg_L->state_variable_error.theta * wheel_K_L[0]; // ¼«ÐÔÕýÈ·
-  leg_L->state_variable_wheel_out.theta_dot = leg_L->state_variable_error.theta_dot * wheel_K_L[1]; // ¼«ÐÔÕýÈ·
+  leg_L->state_variable_wheel_out.theta = leg_L->state_variable_error.theta * wheel_K_L[0]; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È·
+  leg_L->state_variable_wheel_out.theta_dot = leg_L->state_variable_error.theta_dot * wheel_K_L[1]; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È·
   leg_L->state_variable_wheel_out.x = leg_L->state_variable_error.x * wheel_K_L[2];
   leg_L->state_variable_wheel_out.x_dot = leg_L->state_variable_error.x_dot * wheel_K_L[3];
-  leg_L->state_variable_wheel_out.phi = leg_L->state_variable_error.phi * wheel_K_L[4]; // ¼«ÐÔÕýÈ·
-  leg_L->state_variable_wheel_out.phi_dot = leg_L->state_variable_error.phi_dot * wheel_K_L[5]; // ¼«ÐÔÕýÈ·
+  leg_L->state_variable_wheel_out.phi = leg_L->state_variable_error.phi * wheel_K_L[4]; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È·
+  leg_L->state_variable_wheel_out.phi_dot = leg_L->state_variable_error.phi_dot * wheel_K_L[5]; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È·
 
-  leg_R->state_variable_wheel_out.theta = leg_R->state_variable_error.theta * wheel_K_R[0]; // ¼«ÐÔÕýÈ·
-  leg_R->state_variable_wheel_out.theta_dot = leg_R->state_variable_error.theta_dot * wheel_K_R[1]; // ¼«ÐÔÕýÈ·
+  leg_R->state_variable_wheel_out.theta = leg_R->state_variable_error.theta * wheel_K_R[0]; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È·
+  leg_R->state_variable_wheel_out.theta_dot = leg_R->state_variable_error.theta_dot * wheel_K_R[1]; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È·
   leg_R->state_variable_wheel_out.x = leg_R->state_variable_error.x * wheel_K_R[2];
   leg_R->state_variable_wheel_out.x_dot = leg_R->state_variable_error.x_dot * wheel_K_R[3];
-  leg_R->state_variable_wheel_out.phi = leg_R->state_variable_error.phi * wheel_K_R[4]; // ¼«ÐÔÕýÈ·
-  leg_R->state_variable_wheel_out.phi_dot = leg_R->state_variable_error.phi_dot * wheel_K_R[5]; // ¼«ÐÔÕýÈ·
+  leg_R->state_variable_wheel_out.phi = leg_R->state_variable_error.phi * wheel_K_R[4]; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È·
+  leg_R->state_variable_wheel_out.phi_dot = leg_R->state_variable_error.phi_dot * wheel_K_R[5]; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È·
 
-  // -?  ´ý²â
+  // -?  ï¿½ï¿½ï¿½ï¿½
   leg_L->state_variable_joint_out.theta = leg_L->state_variable_error.theta * joint_K_L[0];
   leg_L->state_variable_joint_out.theta_dot = leg_L->state_variable_error.theta_dot * joint_K_L[1];
   leg_L->state_variable_joint_out.x = leg_L->state_variable_error.x * joint_K_L[2];
@@ -224,24 +224,24 @@ static void state_variable_out(Leg* leg_L, Leg* leg_R) {
 
 void lqr_ctrl(void) {
 
-  // K¾ØÕóÄâºÏ
+  // Kï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   chassis_K_matrix_fitting(chassis.leg_L.vmc.forward_kinematics.fk_L0.L0, wheel_K_L, wheel_fitting_factor);
   chassis_K_matrix_fitting(chassis.leg_L.vmc.forward_kinematics.fk_L0.L0, joint_K_L, joint_fitting_factor);
   chassis_K_matrix_fitting(chassis.leg_R.vmc.forward_kinematics.fk_L0.L0, wheel_K_R, wheel_fitting_factor);
   chassis_K_matrix_fitting(chassis.leg_R.vmc.forward_kinematics.fk_L0.L0, joint_K_R, joint_fitting_factor);
 
-  // ¸üÐÂ·´À¡×´Ì¬±äÁ¿
+  // ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½
   state_variable_update(&chassis.leg_L,
                         &chassis.leg_R,
                         chassis.imu_reference.pitch_angle,
                         chassis.imu_reference.pitch_gyro);
 
-  // ÉèÖÃÆÚÍû×´Ì¬±äÁ¿
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½
   state_variable_set(&chassis.leg_L, &chassis.leg_R);
 
-  // ¼ÆËãÎó²î(·´À¡ - ÆÚÍû)
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½ - ï¿½ï¿½ï¿½ï¿½)
   state_variable_error(&chassis.leg_L, &chassis.leg_R);
 
-  // ¼ÆËãÃ¿¸ö×´Ì¬±äÁ¿ÏîµÄÊä³ö(×¢Òâ¼«ÐÔ)
+  // ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(×¢ï¿½â¼«ï¿½ï¿½)
   state_variable_out(&chassis.leg_L, &chassis.leg_R);
 }

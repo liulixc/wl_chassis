@@ -28,7 +28,7 @@ extern Referee_info_t Referee;
 extern Chassis chassis;
 
 extern KalmanFilter_t vaEstimateKF;
-
+extern float vel_acc[2];
 
 extern float motor_torque_l,motor_w_l;
 extern float motor_torque_r,motor_w_r;
@@ -54,6 +54,7 @@ static void chassis_device_offline_handle() {
 static void set_chassis_ctrl_info() {
     float temp_v_m_per_s = (float) (get_rc_ctrl()->rc.ch[CHASSIS_SPEED_CHANNEL]) * RC_TO_VX;
     ramp_calc(&chassis_vx_ramp,temp_v_m_per_s);
+    chassis_vx_ramp.now_real=vel_acc[0];
     chassis.chassis_ctrl_info.v_m_per_s=chassis_vx_ramp.out;
     chassis.chassis_ctrl_info.x = chassis.chassis_ctrl_info.x + CHASSIS_PERIOD * 0.001f * chassis.chassis_ctrl_info.v_m_per_s;
 

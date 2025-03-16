@@ -31,6 +31,7 @@
 #include "robot_def.h"
 #include "gimbal.h"
 #include "BearCap.h"
+#include "Referee.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -55,6 +56,7 @@ osThreadId calibrateTaskHandle;
 osThreadId chassisTaskHandle;
 osThreadId gimbalTaskHandle;
 osThreadId capTaskHandle;
+osThreadId UI_task_handle;
 /* USER CODE END Variables */
 osThreadId defaultTaskHandle;
 
@@ -149,6 +151,8 @@ void MX_FREERTOS_Init(void) {
   osThreadDef(capTask,cap_task,osPriorityAboveNormal,0,256);
   capTaskHandle = osThreadCreate(osThread(capTask),NULL);
 
+  osThreadDef(UIPaintTask, UI_paint_task,osPriorityNormal,0,256);
+  UI_task_handle= osThreadCreate(osThread(UIPaintTask),NULL);
 
   /* USER CODE END RTOS_THREADS */
 

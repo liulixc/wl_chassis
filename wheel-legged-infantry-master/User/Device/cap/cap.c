@@ -7,7 +7,9 @@ static CAN_TxHeaderTypeDef tx_message;
 
 uint8_t cap_update_flag = 0;
 uint8_t cap_mode = CAP_MODE_SILENT;
+int32_t cap_percentage;
 
+//This is the initialization frame, which is received once after the controller is powered on
 void cap_init(uint8_t cap_mode_)
 {
     uint8_t can_send_data[8];
@@ -26,6 +28,7 @@ void cap_init(uint8_t cap_mode_)
     }
 }
 
+//Control frames,Exceed模式ON
 void cap_control_ExceedOn(uint8_t pb_set, uint8_t cap_mode)
 {
     uint8_t can_send_data[8];
@@ -46,6 +49,7 @@ void cap_control_ExceedOn(uint8_t pb_set, uint8_t cap_mode)
     }
 }
 
+//Control frames，Exceed模式off
 void cap_control_ExceedOff(uint8_t pb_set, uint8_t cap_mode)
 {
     uint8_t can_send_data[8];
@@ -109,19 +113,20 @@ void cap_can_msg_unpack(uint32_t id, uint8_t data[]) {
             }
             break;
         }
-        case CAP_INFO_FEEDBACK_ID:
+        case CAP_INFO_FEEDBACK_ID://feedback frames
         {
-            Cap.capFeedback.esr_v = (uint16_t)((data[0] << 8) | data[1]);
-            Cap.capFeedback.work_s1 = data[2];
-            Cap.capFeedback.work_s2 = data[3];
-            Cap.capFeedback.input_power = (uint16_t)((data[4] << 8) | data[5]);
+            Cap.capFeedback.esr_v = (uint16_t)((data[0] << 8) | data[1]);//ESR修正后的电容组电压
+            Cap.capFeedback.work_s1 = data[2];      //工作强度1
+            Cap.capFeedback.work_s2 = data[3];      //工作强度2
+            Cap.capFeedback.input_power = (uint16_t)((data[4] << 8) | data[5]);//电源输入功率
+            cap_percentage = Cap.capFeedback.esr_v/2800;
             if(Cap.can_init_state != CAP_INIT_FINISHED)
             {
                 Cap.can_init_state = CAP_INIT_FINISHED;
             }
             break;
         }
-        case CAP_INIT_FEEDBACK_ID:
+        case CAP_INIT_FEEDBACK_ID://ready frames
         {
             Cap.can_init_state = data[0];
 //          hcan->ErrorCode = HAL_CAN_ERROR_NONE; //don't understand
