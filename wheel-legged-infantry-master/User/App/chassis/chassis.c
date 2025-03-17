@@ -19,6 +19,7 @@
 #include "remote.h"
 #include "error.h"
 #include "Referee.h"
+#include "cap.h"
 
 extern CAN_HandleTypeDef hcan1;
 extern CAN_HandleTypeDef hcan2;
@@ -40,7 +41,74 @@ ramp_function_source_t  chassis_vx_ramp;
 /*******************************************************************************
  *                                    Remote                                   *
  *******************************************************************************/
+void speed_ramp(void)
+{
+    //先不拿来用
+//    if(cap_mode==CAP_MODE_WORK)
+//    {
+//        set_ramp_increase_decrease(&chassis_vx_ramp,0.005f,0.005f);
+//    }
+//    switch (Referee.GameRobotStat.chassis_power_limit) {
+//        case 40: {
+//            set_ramp_increase_decrease(&chassis_vx_ramp,0.001f,0.001f);
+//            break;
+//        }
+//        case 45: {
+//            set_ramp_increase_decrease(&chassis_vx_ramp,0.001f,0.001f);
+//            break;
+//        }
+//        case 50: {
+//            set_ramp_increase_decrease(&chassis_vx_ramp,0.001f,0.001f);
+//            break;
+//        }
+//        case 55: {
+//            set_ramp_increase_decrease(&chassis_vx_ramp,0.001f,0.001f);
+//            break;
+//        }
+//        case 60: {
+//            set_ramp_increase_decrease(&chassis_vx_ramp,0.001f,0.001f);
+//            break;
+//        }
+//        case 65: {
+//            set_ramp_increase_decrease(&chassis_vx_ramp,0.001f,0.001f);
+//            break;
+//        }
+//        case 70: {
+//            set_ramp_increase_decrease(&chassis_vx_ramp,0.001f,0.001f);
+//            break;
+//        }
+//        case 75: {
+//            set_ramp_increase_decrease(&chassis_vx_ramp,0.001f,0.001f);
+//            break;
+//        }
+//        case 80: {
+//            set_ramp_increase_decrease(&chassis_vx_ramp,0.001f,0.001f);
+//            break;
+//        }
+//        case 85: {
+//            set_ramp_increase_decrease(&chassis_vx_ramp,0.001f,0.001f);
+//            break;
+//        }
+//        case 90: {
+//            set_ramp_increase_decrease(&chassis_vx_ramp,0.001f,0.001f);
+//            break;
+//        }
+//        case 95: {
+//            set_ramp_increase_decrease(&chassis_vx_ramp,0.001f,0.001f);
+//            break;
+//        }
+//        case 100: {
+//            set_ramp_increase_decrease(&chassis_vx_ramp,0.001f,0.001f);
+//            break;
+//        }
+//        default:{
+//            set_ramp_increase_decrease(&chassis_vx_ramp,0.001f,0.001f);
+//        }break;
+//    }
 
+        set_ramp_increase_decrease(&chassis_vx_ramp,0.001f,0.002f);
+
+}
 
 /** ģ�����ߴ��� **/
 static void chassis_device_offline_handle() {
@@ -55,9 +123,9 @@ static void set_chassis_ctrl_info() {
     float temp_v_m_per_s = (float) (get_rc_ctrl()->rc.ch[CHASSIS_SPEED_CHANNEL]) * RC_TO_VX;
     ramp_calc(&chassis_vx_ramp,temp_v_m_per_s);
     chassis_vx_ramp.now_real=vel_acc[0];
-    chassis.chassis_ctrl_info.v_m_per_s=chassis_vx_ramp.out;
-    chassis.chassis_ctrl_info.x = chassis.chassis_ctrl_info.x + CHASSIS_PERIOD * 0.001f * chassis.chassis_ctrl_info.v_m_per_s;
+    chassis.chassis_ctrl_info.v_m_per_s=chassis_vx_ramp.out;//这个地方对加速和减速都做了斜坡处理，但是为了能实现即停的效果decrease的值应该稍微给大
 
+    chassis.chassis_ctrl_info.x = chassis.chassis_ctrl_info.x + CHASSIS_PERIOD * 0.001f * chassis.chassis_ctrl_info.v_m_per_s;
     chassis.chassis_ctrl_info.yaw_angle_rad -= (float) (get_rc_ctrl()->rc.ch[CHASSIS_YAW_CHANNEL]) * (-RC_TO_YAW_INCREMENT);
 //    chassis.chassis_ctrl_info.height_m = 0.18f;
 
@@ -103,7 +171,12 @@ static void set_chassis_mode() {
 
 /** ����ͨ�����ͨ�Ž�����̨����Ϣ **/
 static void set_chassis_ctrl_info_from_gimbal_msg() {
-    chassis.chassis_ctrl_info.v_m_per_s = get_gimbal_msg()->chassis_ctrl_info.v_m_per_s;
+    speed_ramp();
+    float temp_v_m_per_s = get_gimbal_msg()->chassis_ctrl_info.v_m_per_s;;
+    chassis_vx_ramp.now_real=vel_acc[0];
+    ramp_calc(&chassis_vx_ramp,temp_v_m_per_s);
+    chassis.chassis_ctrl_info.v_m_per_s=chassis_vx_ramp.out;//这个地方对加速和减速都做了斜坡处理，但是为了能实现即停的效果decrease的值应该稍微给大
+
 //    if (Referee.GameRobotStat.chassis_power_limit==80)chassis.chassis_ctrl_info.v_m_per_s*=1.25f;
     chassis.chassis_ctrl_info.x = chassis.chassis_ctrl_info.x + CHASSIS_PERIOD * 0.001f * chassis.chassis_ctrl_info.v_m_per_s;
     chassis.chassis_ctrl_info.yaw_angle_rad = get_gimbal_msg()->chassis_ctrl_info.yaw_angle_rad;
@@ -130,6 +203,8 @@ static void set_chassis_mode_from_gimbal_msg() {
         chassis.chassis_ctrl_mode = CHASSIS_SPIN;
     }
 }
+
+
 
 /*******************************************************************************
  *                                 Function                                    *
@@ -214,11 +289,7 @@ static void chassis_motor_cmd_send() {
 
 
 #endif
-
-
-//实测下面这套功率拟合基本能用,我需要用发给电机的力矩重新拟合一下功率看看跟裁判系统反馈功率的不同，然后看看是不是右边轮毂力矩取反的问题
-
-
+    //下面这套勉强能用吧就，这里只是来测试用的，功率控制在vmc.c文件
         power_nihe=3.1604*motor_torque_l*motor_torque_l+3.3810*motor_torque_r*motor_torque_r
                 +0.0140*motor_torque_l*motor_w_l+0.0142*motor_torque_r*motor_w_r
                 +0.6685+0.3708

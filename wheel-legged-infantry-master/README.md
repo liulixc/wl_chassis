@@ -1,2 +1,4 @@
 # wheel-legged-infantry
 修改了Matlab get_k_length.m文件中关于单边腿质量和底盘+云台的机体质量数值
+底盘代码跟裁判系统交互，底盘做ui_paint的任务
+云台代码接收从图传模块传来的键鼠信息进行控制，云台需要通过CAN1把ui中的一些信息传给底盘

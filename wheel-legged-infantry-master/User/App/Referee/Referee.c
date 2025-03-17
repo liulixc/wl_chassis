@@ -12,11 +12,10 @@
 extern UART_HandleTypeDef huart6;
 extern UART_HandleTypeDef huart1;
 
-//准备移植小头代码
 extern GimbalMsg gimbal_msg;//获取云台模式
 extern Chassis chassis;//获取底盘模式
 extern key_board_t KeyBoard;//获取键盘信息
-extern int32_t cap_percentage;//电容百分比，在can_receive.c文件中可见
+extern int32_t cap_percentage;//电容百分比，在Cap.c文件中可见
 
 ext_ui_color uiColor;//判断ui颜色
 Graphic_Operate update_flag = UI_ADD;
