@@ -106,7 +106,7 @@ void speed_ramp(void)
 //        }break;
 //    }
 
-        set_ramp_increase_decrease(&chassis_vx_ramp,0.001f,0.002f);
+        set_ramp_increase_decrease(&chassis_vx_ramp,0.005f,0.01f);
 
 }
 

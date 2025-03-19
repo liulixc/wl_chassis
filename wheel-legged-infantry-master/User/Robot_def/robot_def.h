@@ -11,7 +11,7 @@ typedef double fp64;
 
 /** �궨�� **/
 //CHASSIS_REMOTE��1��������ң��������
-#define CHASSIS_REMOTE 1
+#define CHASSIS_REMOTE 0
 
 //DEBUG_MODE��1���������ģʽ���رչؽں�������
 #define DEBUG_MODE 0
